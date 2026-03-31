@@ -2039,7 +2039,7 @@ function buildReportHTML(personalNote){
   return `<div class="rpt">
     <div class="rpt-hero">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <span style="font-size:28px;">🎸</span>
+        <span style="font-size:24px;background:#e8b86d;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#1a1a2e;">G</span>
         <div>
           <h2>Guitar Class Assessment Report</h2>
           <p>Hanover School Music Department</p>
@@ -2082,7 +2082,7 @@ function prepSendTab(){
   const dateStr = m.assessDate||new Date().toISOString().split('T')[0];
   document.getElementById('sendToEmail').value = email;
   document.getElementById('sendSubject').value =
-    `Guitar Class Assessment Report — ${name} — ${dateStr}`;
+    `Guitar Class Assessment Report - ${name} - ${dateStr}`;
   document.getElementById('sendResult').style.display='none';
   const warn = document.getElementById('gmailNotSignedInWarn');
   warn.style.display = accessToken ? 'none' : 'block';
@@ -2135,19 +2135,29 @@ async function sendReportEmail(){
   const m = getFormMeta();
   const teacherField = config.metaFields.find(f=>f.id==='teacherName');
   const teacher = teacherField&&m[teacherField.id] ? m[teacherField.id] : 'Guitar Teacher';
-  let raw = [
+
+  // Encode subject with RFC 2047 encoded-word syntax to handle special chars like em-dash
+  const encodedSubject = '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(subject))) + '?=';
+
+  const headers = [
     `To: ${toEmail}`,
-    ccTeacher && signedInEmail ? `Cc: ${signedInEmail}` : '',
-    `From: ${teacher} <${signedInEmail||toEmail}>`,
-    `Subject: ${subject}`,
+    ccTeacher && signedInEmail ? `Cc: ${signedInEmail}` : null,
+    `From: ${signedInEmail}`,
+    `Subject: ${encodedSubject}`,
     `MIME-Version: 1.0`,
     `Content-Type: text/html; charset=UTF-8`,
-    ``,
-    emailBody
-  ].filter(Boolean).join('\r\n');
+    `Content-Transfer-Encoding: base64`,
+    ``
+  ].filter(v=>v!==null).join('\r\n');
 
-  // Base64url encode
-  const encoded = btoa(unescape(encodeURIComponent(raw)))
+  // Encode the HTML body separately as base64
+  const bodyBytes = new TextEncoder().encode(emailBody);
+  const bodyB64 = btoa(String.fromCharCode(...bodyBytes))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+
+  // Encode the full raw message (headers + body)
+  const rawMessage = headers + '\r\n' + bodyB64;
+  const encoded = btoa(unescape(encodeURIComponent(rawMessage)))
     .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 
   try{
