@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Guitar Class Final Assessment</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+:root{
+  --dk:#1a1a2e;--mid:#16213e;--accent:#e8b86d;--light:#f8f5f0;
+  --s4:#27ae60;--s3:#2980b9;--s2:#f39c12;--s1:#e74c3c;--s0:#95a5a6;--sna:#bdc3c7;
+}
+*{box-sizing:border-box;}
+body{background:var(--light);font-family:'Segoe UI',sans-serif;margin:0;padding:0;}
+
+/* CONFIG BANNER */
+#configBanner{background:#fff3cd;border-bottom:2px solid #ffc107;padding:9px 20px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+#configBanner.hidden{display:none;}
+
+/* HEADER */
+.app-header{background:linear-gradient(135deg,var(--dk) 0%,var(--mid) 60%,#0f3460 100%);color:white;padding:14px 22px 11px;border-bottom:3px solid var(--accent);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.brand{display:flex;align-items:center;gap:11px;}
+.brand-logo{width:42px;height:42px;border-radius:8px;object-fit:contain;display:none;}
+.brand i.default-icon{font-size:24px;color:var(--accent);}
+.brand h1{font-size:18px;margin:0;font-weight:700;}
+.brand p{font-size:11px;color:#aaa;margin:0;}
+.header-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+
+/* TOOLBAR */
+.toolbar{background:white;border-bottom:1px solid #ddd;padding:7px 18px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.toolbar .btn{font-size:12px;padding:5px 11px;border-radius:18px;display:inline-flex;align-items:center;gap:5px;}
+.drive-status{font-size:12px;color:#666;margin-left:auto;display:flex;align-items:center;gap:5px;}
+.sdot{width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;}
+.sdot.ok{background:#27ae60;} .sdot.busy{background:#f39c12;}
+
+/* STUDENT BAR */
+.student-bar{background:white;border-bottom:1px solid #e5e5e5;padding:9px 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.student-bar label{font-size:12px;font-weight:600;color:#666;margin:0;white-space:nowrap;}
+.student-bar input,.student-bar select{font-size:13px;border:1px solid #ccc;border-radius:6px;padding:4px 8px;outline:none;}
+.student-bar input:focus,.student-bar select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,184,109,.2);}
+
+/* MAIN */
+.main{padding:16px;max-width:1020px;margin:0 auto;}
+
+/* LEGEND */
+.legend-bar{background:white;border:1px solid #e5e5e5;border-radius:10px;padding:8px 14px;margin-bottom:14px;display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.lpill{font-size:11px;padding:2px 8px;border-radius:20px;color:white;font-weight:600;}
+.lp4{background:var(--s4)}.lp3{background:var(--s3)}.lp2{background:var(--s2)}.lp1{background:var(--s1)}.lp0{background:var(--s0)}.lpna{background:var(--sna);color:#555;}
+
+/* SECTION CARD */
+.sec-card{background:white;border-radius:12px;border:1px solid #e0e0e0;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.sec-head{background:var(--dk);color:white;padding:8px 14px;display:flex;align-items:center;gap:8px;}
+.sec-head i{color:var(--accent);font-size:14px;}
+.sec-head span{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;flex:1;}
+.sec-sub{background:#f0ebe3;border-bottom:1px solid #ddd;padding:5px 14px;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;}
+
+/* ASSESSMENT ROW */
+.a-row{display:grid;grid-template-columns:270px 1fr 150px;border-bottom:1px solid #f2f2f2;align-items:stretch;min-height:48px;}
+.a-row:last-child{border-bottom:none;}
+.a-row:hover{background:#fafaf8;}
+.row-lbl{padding:8px 10px 8px 14px;font-size:13px;color:#333;display:flex;align-items:center;border-right:1px solid #f0f0f0;gap:4px;}
+.chord-inp{border:none;border-bottom:1px dashed #bbb;background:transparent;font-size:12px;color:#444;width:108px;outline:none;padding:1px 3px;}
+.chord-inp:focus{border-bottom-color:var(--accent);background:#fffdf5;}
+.score-btns{display:flex;align-items:center;padding:6px 9px;gap:4px;flex-wrap:wrap;}
+.sb{width:33px;height:33px;border-radius:50%;border:2px solid #ddd;background:white;cursor:pointer;font-size:11px;font-weight:700;color:#999;transition:all .12s;display:flex;align-items:center;justify-content:center;padding:0;}
+.sb:hover{transform:scale(1.12);}
+.sb.a4{background:var(--s4);border-color:var(--s4);color:white;}
+.sb.a3{background:var(--s3);border-color:var(--s3);color:white;}
+.sb.a2{background:var(--s2);border-color:var(--s2);color:white;}
+.sb.a1{background:var(--s1);border-color:var(--s1);color:white;}
+.sb.a0{background:var(--s0);border-color:var(--s0);color:white;}
+.sb.ana{background:var(--sna);border-color:#aaa;color:#555;}
+.row-cmt{padding:6px 9px 6px 4px;display:flex;align-items:center;}
+.row-cmt input{width:100%;font-size:12px;border:1px solid #e0e0e0;border-radius:6px;padding:4px 7px;color:#555;outline:none;background:#fafafa;}
+.row-cmt input:focus{border-color:var(--accent);background:white;}
+
+/* SUMMARY */
+.summary{background:white;border-radius:12px;border:1px solid #e0e0e0;padding:14px 16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.summary h5{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#888;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;}
+.stat-box{background:#f8f6f2;border-radius:9px;padding:9px;text-align:center;border:1px solid #eee;}
+.stat-num{font-size:24px;font-weight:700;line-height:1.1;}
+.stat-lbl{font-size:10px;color:#888;margin-top:2px;}
+.prog-wrap{height:7px;border-radius:4px;overflow:hidden;background:#eee;margin-top:9px;display:flex;}
+.pseg{height:100%;transition:width .4s;}
+
+/* ══ ADMIN PANEL ══════════════════════════════════════════════ */
+.admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto;}
+.admin-overlay.open{display:flex;}
+.admin-box{background:white;border-radius:14px;width:92%;max-width:860px;overflow:hidden;box-shadow:0 12px 50px rgba(0,0,0,.25);margin-bottom:40px;}
+.admin-header{background:var(--dk);color:white;padding:14px 20px;display:flex;align-items:center;gap:10px;border-bottom:3px solid var(--accent);}
+.admin-header i{color:var(--accent);font-size:18px;}
+.admin-header h3{margin:0;font-size:16px;font-weight:700;flex:1;}
+.admin-tabs{display:flex;background:#f5f5f5;border-bottom:1px solid #e0e0e0;}
+.admin-tab{padding:10px 20px;font-size:13px;font-weight:600;color:#666;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap;}
+.admin-tab.active{color:var(--dk);border-bottom-color:var(--accent);background:white;}
+.admin-tab:hover:not(.active){background:#efefef;}
+.admin-body{padding:20px;}
+.admin-section{display:none;}
+.admin-section.active{display:block;}
+
+/* SECTION BUILDER */
+.sec-builder{border:1px solid #e0e0e0;border-radius:10px;margin-bottom:14px;overflow:hidden;}
+.sec-builder-head{background:#f8f6f2;padding:9px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e0e0e0;}
+.sec-builder-head input{font-size:14px;font-weight:700;border:none;background:transparent;outline:none;flex:1;color:var(--dk);}
+.sec-builder-head input:focus{background:#fff9ee;border-bottom:1px solid var(--accent);}
+.sec-builder-body{padding:10px 14px;}
+.item-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f5f5f5;}
+.item-row:last-child{border-bottom:none;}
+.drag-handle{color:#ccc;cursor:grab;font-size:14px;padding:0 3px;}
+.drag-handle:active{cursor:grabbing;}
+.item-row input.item-name{flex:1;font-size:13px;border:1px solid #e0e0e0;border-radius:6px;padding:5px 9px;outline:none;}
+.item-row input.item-name:focus{border-color:var(--accent);}
+.item-row .cb-wrap{display:flex;align-items:center;gap:4px;font-size:11px;color:#888;white-space:nowrap;}
+.item-row .cb-wrap input{width:14px;height:14px;}
+.btn-icon{width:30px;height:30px;border-radius:6px;border:1px solid #e0e0e0;background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:#888;transition:all .12s;}
+.btn-icon:hover{background:#fee;border-color:#e74c3c;color:#e74c3c;}
+.btn-icon.add:hover{background:#efffef;border-color:#27ae60;color:#27ae60;}
+.add-item-row{padding:8px 0 2px;display:flex;gap:7px;align-items:center;}
+.add-item-row input{flex:1;font-size:13px;border:1px dashed #ccc;border-radius:6px;padding:5px 9px;outline:none;background:#fafafa;}
+.add-item-row input:focus{border-color:var(--accent);background:white;}
+
+/* SUB-SECTION BUILDER */
+.subsec-row{background:#f0ebe3;border-radius:6px;padding:6px 10px;margin-bottom:4px;display:flex;align-items:center;gap:7px;}
+.subsec-row input{flex:1;font-size:12px;border:1px solid #ddd;border-radius:5px;padding:3px 7px;outline:none;background:white;}
+.subsec-row input:focus{border-color:var(--accent);}
+
+/* CLASS LIST */
+.class-tag{display:inline-flex;align-items:center;gap:5px;background:#f0f0f0;border:1px solid #ddd;border-radius:20px;padding:4px 12px;font-size:13px;margin:4px;}
+.class-tag button{background:none;border:none;color:#aaa;cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.class-tag button:hover{color:#e74c3c;}
+.meta-field-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f5;}
+.meta-field-row input{flex:1;font-size:13px;border:1px solid #e0e0e0;border-radius:6px;padding:5px 9px;outline:none;}
+.meta-field-row input:focus{border-color:var(--accent);}
+.meta-field-row select{font-size:12px;border:1px solid #e0e0e0;border-radius:6px;padding:5px 7px;outline:none;}
+
+/* DRIVE CONFIG */
+.drive-cfg-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5;}
+.drive-cfg-row label{font-size:13px;font-weight:600;color:#555;min-width:200px;}
+.drive-cfg-row input{flex:1;font-size:13px;border:1px solid #e0e0e0;border-radius:6px;padding:5px 9px;outline:none;}
+.drive-cfg-row input:focus{border-color:var(--accent);}
+
+/* PIN MODAL */
+.pin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:3000;align-items:center;justify-content:center;}
+.pin-overlay.open{display:flex;}
+.pin-box{background:white;border-radius:14px;padding:30px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.25);}
+.pin-box h4{font-weight:700;margin-bottom:4px;}
+.pin-box p{color:#888;font-size:13px;margin-bottom:20px;}
+.pin-input{display:flex;gap:10px;justify-content:center;margin-bottom:18px;}
+.pin-input input{width:48px;height:54px;text-align:center;font-size:22px;font-weight:700;border:2px solid #ddd;border-radius:10px;outline:none;color:var(--dk);}
+.pin-input input:focus{border-color:var(--accent);}
+.pin-error{color:#e74c3c;font-size:13px;margin-bottom:10px;min-height:18px;}
+
+/* GENERAL MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal-box{background:white;border-radius:14px;padding:24px;max-width:480px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;}
+.modal-box h4{font-weight:700;margin-bottom:3px;}
+.modal-sub{color:#888;font-size:13px;margin-bottom:16px;}
+.drive-opt{border:2px solid #e0e0e0;border-radius:10px;padding:11px 13px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:11px;transition:border-color .13s;}
+.drive-opt:hover{border-color:var(--accent);background:#fffdf5;}
+.drive-opt i{font-size:19px;min-width:22px;text-align:center;}
+.opt-title{font-size:13px;font-weight:600;}
+.opt-desc{font-size:11px;color:#888;}
+.client-id-box{border:1px dashed #bbb;border-radius:8px;padding:12px;margin-top:10px;background:#fafafa;}
+.client-id-box label{font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;}
+.client-id-box input{width:100%;font-size:12px;border:1px solid #ccc;border-radius:6px;padding:5px 8px;outline:none;}
+.setup-steps{background:#f0f4ff;border-radius:8px;padding:11px;margin-top:9px;font-size:12px;color:#333;line-height:1.7;}
+.setup-steps ol{margin:0;padding-left:16px;}
+.setup-steps a{color:#1a73e8;}
+.hist-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px;}
+.hist-row:last-child{border-bottom:none;}
+.hist-name{flex:1;font-weight:600;}
+.hist-meta{font-size:11px;color:#888;}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none;}
+.toast{background:#1a1a2e;color:white;padding:9px 14px;border-radius:9px;font-size:13px;display:flex;align-items:center;gap:7px;opacity:0;transform:translateY(8px);transition:all .22s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+
+/* DRAG OVER */
+.drag-over{background:#fffbef!important;border:2px dashed var(--accent)!important;}
+
+/* ══ REPORT / EMAIL MODAL ════════════════════════════════════ */
+.report-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;}
+.report-overlay.open{display:flex;}
+.report-box{background:white;border-radius:14px;width:100%;max-width:720px;overflow:hidden;box-shadow:0 12px 50px rgba(0,0,0,.25);margin-bottom:30px;}
+.report-header{background:var(--dk);color:white;padding:13px 18px;display:flex;align-items:center;gap:9px;border-bottom:3px solid var(--accent);}
+.report-header i{color:var(--accent);font-size:16px;}
+.report-header h3{margin:0;font-size:15px;font-weight:700;flex:1;}
+.report-tabs{display:flex;background:#f5f5f5;border-bottom:1px solid #e0e0e0;}
+.report-tab{padding:9px 18px;font-size:13px;font-weight:600;color:#666;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;white-space:nowrap;}
+.report-tab.active{color:var(--dk);border-bottom-color:var(--accent);background:white;}
+.report-tab:hover:not(.active){background:#efefef;}
+.report-body{padding:18px;}
+.report-section{display:none;}
+.report-section.active{display:block;}
+
+/* Student lookup */
+.lookup-wrap{position:relative;margin-bottom:14px;}
+.lookup-wrap input{width:100%;font-size:14px;border:1px solid #ccc;border-radius:8px;padding:8px 12px 8px 36px;outline:none;}
+.lookup-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,184,109,.2);}
+.lookup-wrap .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#aaa;font-size:14px;}
+.lookup-results{border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;margin-bottom:14px;display:none;}
+.lookup-row{padding:9px 14px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f5f5f5;transition:background .1s;}
+.lookup-row:last-child{border-bottom:none;}
+.lookup-row:hover{background:#fffdf5;}
+.lookup-row .lk-name{font-weight:600;flex:1;}
+.lookup-row .lk-meta{font-size:11px;color:#888;}
+.selected-student{background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:none;font-size:13px;}
+.selected-student .ss-name{font-weight:700;font-size:14px;}
+.selected-student .ss-meta{color:#555;font-size:12px;margin-top:2px;}
+
+/* Email preview */
+.email-preview{border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.email-preview-header{background:#f8f8f8;border-bottom:1px solid #e0e0e0;padding:10px 14px;font-size:12px;color:#555;}
+.email-preview-header div{margin-bottom:3px;}
+.email-preview-header span{font-weight:600;color:#333;}
+.email-preview-body{padding:0;max-height:420px;overflow-y:auto;}
+
+/* Report HTML (rendered inside iframe-like div) */
+.rpt{font-family:'Segoe UI',sans-serif;font-size:13px;color:#222;padding:20px 22px;line-height:1.6;}
+.rpt-hero{background:linear-gradient(135deg,#1a1a2e,#16213e);color:white;padding:20px 22px;border-radius:0;}
+.rpt-hero h2{margin:0 0 3px;font-size:18px;font-weight:700;}
+.rpt-hero p{margin:0;font-size:12px;color:#aaa;}
+.rpt-hero .accent{color:#e8b86d;}
+.rpt-meta{display:flex;flex-wrap:wrap;gap:8px;padding:12px 22px;background:#f8f6f2;border-bottom:1px solid #e5e5e5;}
+.rpt-meta-pill{background:white;border:1px solid #e0e0e0;border-radius:20px;padding:3px 12px;font-size:11px;color:#555;}
+.rpt-meta-pill strong{color:#333;}
+.rpt-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#888;padding:12px 22px 5px;border-top:1px solid #f0f0f0;}
+.rpt-row{display:flex;align-items:center;padding:7px 22px;border-bottom:1px solid #f8f8f8;gap:10px;}
+.rpt-row:hover{background:#fafafa;}
+.rpt-row-label{flex:1;font-size:13px;color:#333;}
+.rpt-score-pill{min-width:90px;text-align:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:white;}
+.rpt-score-ns{background:#eee;color:#aaa;}
+.rpt-comment{font-size:11px;color:#888;font-style:italic;flex:1;text-align:right;}
+.rpt-summary{padding:14px 22px;background:#f8f6f2;border-top:1px solid #e5e5e5;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.rpt-stat{text-align:center;background:white;border:1px solid #e0e0e0;border-radius:8px;padding:8px 14px;min-width:70px;}
+.rpt-stat .sn{font-size:20px;font-weight:700;line-height:1;}
+.rpt-stat .sl{font-size:10px;color:#888;margin-top:2px;}
+.rpt-footer{padding:12px 22px;font-size:11px;color:#aaa;border-top:1px solid #f0f0f0;text-align:center;}
+
+@media print{
+  .report-overlay,.pin-overlay,.admin-overlay,.overlay{display:none!important;}
+}
+@media(max-width:640px){
+  .a-row{grid-template-columns:1fr;}
+  .row-lbl{border-right:none;border-bottom:1px solid #f0f0f0;}
+}
+</style>
+</head>
+<body>
+
+<!-- CONFIG BANNER -->
+<div id="configBanner">
+  <i class="fas fa-triangle-exclamation" style="color:#856404;"></i>
+  <strong>Setup required:</strong> Enter your Google OAuth Client ID to enable Drive sync.
+  <button class="btn btn-sm btn-warning" onclick="openDriveModal()" style="padding:2px 10px;font-size:12px;">Configure</button>
+  <span style="color:#856404;font-size:12px;"><a href="#" onclick="openSetupGuide()">Setup guide</a></span>
+</div>
+
+<!-- HEADER -->
+<div class="app-header">
+  <div class="brand">
+    <img id="brandLogo" class="brand-logo" src="" alt=""/>
+    <i class="fas fa-guitar default-icon" id="defaultIcon"></i>
+    <div>
+      <h1 id="brandName">Guitar Class Assessment</h1>
+      <p id="brandSub">Final Assessment Tracker</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="userBadge" style="font-size:12px;background:rgba(255,255,255,.12);padding:4px 11px;border-radius:12px;color:#ddd;display:none;">
+      <i class="fas fa-circle-user" style="margin-right:4px;color:var(--accent);"></i>
+      <span id="userEmail"></span>
+    </span>
+    <span id="saveBadge" style="font-size:11px;background:rgba(255,255,255,.1);padding:3px 9px;border-radius:12px;color:#aaa;display:none;">
+      <i class="fas fa-circle-dot" style="color:#27ae60;font-size:9px;margin-right:3px;"></i>Saved
+    </span>
+    <button id="adminBtn" class="btn btn-sm" style="background:rgba(232,184,109,.15);color:var(--accent);border:1px solid rgba(232,184,109,.3);font-size:12px;" onclick="promptAdminPin()">
+      <i class="fas fa-lock"></i> Admin
+    </button>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.2);font-size:12px;" onclick="openDriveModal()">
+      <i class="fab fa-google-drive" style="color:#fbbc04;"></i> Drive
+    </button>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="btn btn-outline-secondary" onclick="newAssessment()"><i class="fas fa-plus"></i> New</button>
+  <button class="btn btn-outline-secondary" onclick="clearForm()"><i class="fas fa-rotate-left"></i> Reset</button>
+  <button class="btn btn-outline-secondary" onclick="openHistory()"><i class="fas fa-clock-rotate-left"></i> History</button>
+  <button class="btn btn-outline-primary" onclick="exportCSV()"><i class="fas fa-file-csv"></i> Export CSV</button>
+  <button class="btn btn-outline-secondary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+  <button id="btnSaveDrive" class="btn" style="background:#1a73e8;color:white;" onclick="saveToDrive()">
+    <i class="fab fa-google-drive"></i> Save to Drive
+  </button>
+  <button id="btnLoadDrive" class="btn btn-outline-secondary" onclick="loadFromDriveDialog()" style="display:none;">
+    <i class="fas fa-folder-open"></i> Open
+  </button>
+  <button class="btn btn-outline-success" onclick="openReportModal()" id="btnEmailReport">
+    <i class="fas fa-envelope"></i> Email Report
+  </button>
+  <div class="drive-status">
+    <span class="sdot" id="statusDot"></span>
+    <span id="statusText">Not connected</span>
+    <span id="syncBadge" style="display:none;font-size:11px;background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:10px;padding:2px 8px;margin-left:4px;">
+      <i class="fas fa-clock" style="font-size:10px;"></i> <span id="syncBadgeText">Pending sync</span>
+    </span>
+    <span id="syncingBadge" style="display:none;font-size:11px;background:#e8f4fd;color:#1a5276;border:1px solid #85c1e9;border-radius:10px;padding:2px 8px;margin-left:4px;">
+      <i class="fas fa-rotate fa-spin" style="font-size:10px;"></i> Syncing…
+    </span>
+    <span id="offlineBadge" style="display:none;font-size:11px;background:#fde;color:#c0392b;border:1px solid #e74c3c;border-radius:10px;padding:2px 8px;margin-left:4px;">
+      <i class="fas fa-wifi-slash" style="font-size:10px;"></i> Offline
+    </span>
+  </div>
+</div>
+
+<!-- STUDENT BAR -->
+<div class="student-bar" id="studentBar">
+  <!-- rendered dynamically from config -->
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="legend-bar" id="legendBar"></div>
+  <div id="assessmentSections"></div>
+  <div class="summary">
+    <h5><i class="fas fa-chart-bar" style="color:var(--accent);font-size:13px;"></i> Assessment Summary</h5>
+    <div class="stat-grid" id="statGrid"></div>
+    <div style="margin-top:11px;">
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">Score distribution</div>
+      <div class="prog-wrap" id="progBar"></div>
+      <div id="progLegend" style="display:flex;gap:11px;flex-wrap:wrap;margin-top:5px;"></div>
+    </div>
+    <div style="margin-top:11px;">
+      <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;">
+        <i class="fas fa-comment-dots" style="color:#bbb;margin-right:4px;"></i>Overall Comments
+      </label>
+      <textarea id="overallComments" rows="3" style="width:100%;font-size:13px;border:1px solid #ddd;border-radius:8px;padding:7px;resize:vertical;outline:none;" placeholder="General feedback and observations..." oninput="autoSave()"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PIN MODAL ══════════════════════════════════════════════════ -->
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <i class="fas fa-lock" style="font-size:32px;color:var(--accent);margin-bottom:12px;display:block;"></i>
+    <h4>Admin Access</h4>
+    <p>Enter your 4-digit PIN to open the admin panel.</p>
+    <div class="pin-input">
+      <input type="password" maxlength="1" id="p0" oninput="pinInput(0)" onkeydown="pinKey(event,0)"/>
+      <input type="password" maxlength="1" id="p1" oninput="pinInput(1)" onkeydown="pinKey(event,1)"/>
+      <input type="password" maxlength="1" id="p2" oninput="pinInput(2)" onkeydown="pinKey(event,2)"/>
+      <input type="password" maxlength="1" id="p3" oninput="pinInput(3)" onkeydown="pinKey(event,3)"/>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <button class="btn btn-outline-secondary w-100" onclick="closePinModal()">Cancel</button>
+    <div style="font-size:11px;color:#bbb;margin-top:10px;">Default PIN: 1234 &nbsp;|&nbsp; Change in Admin → Settings</div>
+  </div>
+</div>
+
+<!-- ══ ADMIN PANEL ════════════════════════════════════════════════ -->
+<div class="admin-overlay" id="adminOverlay" onclick="if(event.target===this)closeAdmin()">
+<div class="admin-box">
+  <div class="admin-header">
+    <i class="fas fa-sliders"></i>
+    <h3>Admin Panel</h3>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.2);" onclick="closeAdmin()"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="admin-tabs">
+    <div class="admin-tab active" onclick="switchTab('sections')"><i class="fas fa-list-check" style="margin-right:5px;"></i>Sections &amp; Items</div>
+    <div class="admin-tab" onclick="switchTab('classes')"><i class="fas fa-users" style="margin-right:5px;"></i>Classes &amp; Fields</div>
+    <div class="admin-tab" onclick="switchTab('drive')"><i class="fab fa-google-drive" style="margin-right:5px;"></i>Drive Settings</div>
+    <div class="admin-tab" onclick="switchTab('settings')"><i class="fas fa-gear" style="margin-right:5px;"></i>Settings</div>
+  </div>
+
+  <!-- TAB: SECTIONS -->
+  <div class="admin-body">
+  <div class="admin-section active" id="tab-sections">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--dk);">Assessment Sections &amp; Items</div>
+        <div style="font-size:12px;color:#888;">Drag rows to reorder. Check "Editable" for fields where students write a name.</div>
+      </div>
+      <button class="btn btn-sm btn-success" onclick="addSection()"><i class="fas fa-plus"></i> Add Section</button>
+    </div>
+    <div id="sectionsBuilder"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="saveAndApplySections()"><i class="fas fa-check"></i> Save &amp; Apply</button>
+      <button class="btn btn-outline-secondary" onclick="resetSectionsToDefault()"><i class="fas fa-rotate-left"></i> Reset to Default</button>
+    </div>
+  </div>
+
+  <!-- TAB: CLASSES -->
+  <div class="admin-section" id="tab-classes">
+    <div style="font-size:14px;font-weight:700;color:var(--dk);margin-bottom:4px;">Class List</div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px;">These appear in the Class dropdown on the assessment form.</div>
+    <div id="classTagsWrap" style="margin-bottom:10px;min-height:36px;"></div>
+    <div style="display:flex;gap:7px;align-items:center;margin-bottom:20px;">
+      <input type="text" id="newClassInput" placeholder="New class code (e.g. 3B)" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;width:160px;" onkeydown="if(event.key==='Enter')addClassCode()"/>
+      <button class="btn btn-sm btn-success" onclick="addClassCode()"><i class="fas fa-plus"></i> Add</button>
+    </div>
+
+    <div style="font-size:14px;font-weight:700;color:var(--dk);margin-bottom:4px;">Student Metadata Fields</div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px;">Customise the fields shown in the student information bar.</div>
+    <div id="metaFieldsBuilder"></div>
+    <div style="display:flex;gap:7px;align-items:center;margin-top:8px;">
+      <input type="text" id="newMetaLabel" placeholder="Field label (e.g. Year Level)" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;"/>
+      <select id="newMetaType" style="font-size:12px;border:1px solid #ccc;border-radius:6px;padding:5px 7px;outline:none;">
+        <option value="text">Text</option>
+        <option value="select">Dropdown</option>
+        <option value="date">Date</option>
+      </select>
+      <button class="btn btn-sm btn-success" onclick="addMetaField()"><i class="fas fa-plus"></i> Add</button>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="saveAndApplyClasses()"><i class="fas fa-check"></i> Save &amp; Apply</button>
+    </div>
+  </div>
+
+  <!-- TAB: DRIVE -->
+  <div class="admin-section" id="tab-drive">
+    <div style="font-size:14px;font-weight:700;color:var(--dk);margin-bottom:4px;">Google Drive &amp; Sheets Settings</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">Set shared defaults so all teachers save to the same location.</div>
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-key" style="margin-right:5px;color:#aaa;"></i>OAuth Client ID</label>
+      <input type="text" id="adminClientId" placeholder="xxxx.apps.googleusercontent.com" oninput="adminSaveCid()"/>
+    </div>
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-table" style="margin-right:5px;color:#7b1fa2;"></i>Class Tracking Sheet ID</label>
+      <input type="text" id="adminTrackId" placeholder="Spreadsheet ID from URL..."/>
+    </div>
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-folder" style="margin-right:5px;color:#fbbc04;"></i>Default Save Folder ID</label>
+      <input type="text" id="adminFolderId" placeholder="Drive folder ID (optional)..."/>
+    </div>
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-rotate" style="margin-right:5px;color:#27ae60;"></i>Auto-sync interval</label>
+      <select id="adminSyncInterval" style="font-size:13px;border:1px solid #e0e0e0;border-radius:6px;padding:5px 9px;outline:none;">
+        <option value="30">Every 30 seconds</option>
+        <option value="60" selected>Every 60 seconds</option>
+        <option value="120">Every 2 minutes</option>
+        <option value="300">Every 5 minutes</option>
+        <option value="0">Manual only</option>
+      </select>
+    </div>
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-cloud-arrow-up" style="margin-right:5px;color:#1a73e8;"></i>Config Sheet ID</label>
+      <input type="text" id="adminConfigSheetId" placeholder="Sheet ID where config is stored..."/>
+      <button class="btn btn-sm btn-outline-primary ms-2" onclick="pushConfigToSheet()"><i class="fas fa-upload"></i> Push</button>
+      <button class="btn btn-sm btn-outline-success ms-1" onclick="pullConfigFromSheet()"><i class="fas fa-download"></i> Pull</button>
+    </div>
+    <div style="background:#e8f4fd;border-radius:8px;padding:10px 14px;font-size:12px;color:#1a5276;margin-top:10px;">
+      <i class="fas fa-circle-info" style="margin-right:5px;"></i>
+      <strong>Config sync:</strong> "Push" saves current admin settings to a Google Sheet so all teachers load the same configuration. "Pull" loads the latest config from that sheet.
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="saveDriveSettings()"><i class="fas fa-check"></i> Save Settings</button>
+    </div>
+  </div>
+
+  <!-- TAB: SETTINGS -->
+  <div class="admin-section" id="tab-settings">
+    <div style="font-size:14px;font-weight:700;color:var(--dk);margin-bottom:14px;">Admin Settings</div>
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-lock" style="margin-right:5px;color:#aaa;"></i>Admin PIN</label>
+      <input type="password" id="newPinInput" placeholder="Enter new 4-digit PIN" maxlength="4" style="width:160px;letter-spacing:4px;font-size:16px;text-align:center;"/>
+      <button class="btn btn-sm btn-outline-primary ms-2" onclick="saveNewPin()"><i class="fas fa-check"></i> Update PIN</button>
+    </div>
+    <div class="drive-cfg-row" style="border:none;padding-top:0;">
+      <label style="font-size:12px;color:#888;">Current PIN is stored locally in your browser only.</label>
+    </div>
+    <hr style="margin:14px 0;"/>
+    <div style="font-size:13px;font-weight:600;color:var(--dk);margin-bottom:10px;">Export / Import Config</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-sm btn-outline-primary" onclick="exportConfig()"><i class="fas fa-download"></i> Export config JSON</button>
+      <label class="btn btn-sm btn-outline-secondary" style="cursor:pointer;margin:0;">
+        <i class="fas fa-upload"></i> Import config JSON
+        <input type="file" accept=".json" onchange="importConfig(event)" style="display:none;"/>
+      </label>
+      <button class="btn btn-sm btn-outline-danger" onclick="resetAllConfig()"><i class="fas fa-trash"></i> Reset all config</button>
+    </div>
+  </div>
+  </div><!-- /admin-body -->
+</div>
+</div>
+
+<!-- ══ REPORT & EMAIL MODAL ═══════════════════════════════════════ -->
+<div class="report-overlay" id="reportModal" onclick="if(event.target===this)closeReportModal()">
+<div class="report-box">
+  <div class="report-header">
+    <i class="fas fa-file-lines"></i>
+    <h3>Assessment Report &amp; Email</h3>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.2);" onclick="closeReportModal()"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="report-tabs">
+    <div class="report-tab active" onclick="switchReportTab('lookup')"><i class="fas fa-magnifying-glass" style="margin-right:5px;"></i>Find Student</div>
+    <div class="report-tab" onclick="switchReportTab('preview')"><i class="fas fa-eye" style="margin-right:5px;"></i>Preview Report</div>
+    <div class="report-tab" onclick="switchReportTab('send')"><i class="fas fa-paper-plane" style="margin-right:5px;"></i>Send Email</div>
+  </div>
+  <div class="report-body">
+
+    <!-- TAB: LOOKUP -->
+    <div class="report-section active" id="rtab-lookup">
+      <div style="font-size:13px;color:#555;margin-bottom:12px;">Search your student database to match this assessment to a student record and retrieve their email address.</div>
+      <div class="lookup-wrap">
+        <i class="fas fa-magnifying-glass search-icon"></i>
+        <input type="text" id="studentSearchInput" placeholder="Search by name or class..." oninput="searchStudents(this.value)"/>
+      </div>
+      <div class="lookup-results" id="lookupResults"></div>
+      <div class="selected-student" id="selectedStudentBox">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="fas fa-circle-check" style="color:#27ae60;font-size:20px;"></i>
+          <div>
+            <div class="ss-name" id="ssName"></div>
+            <div class="ss-meta"><i class="fas fa-envelope" style="margin-right:4px;color:#aaa;"></i><span id="ssEmail"></span> &nbsp;·&nbsp; Grade <span id="ssGrade"></span> &nbsp;·&nbsp; <span id="ssClass"></span></div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="clearSelectedStudent()"><i class="fas fa-xmark"></i></button>
+        </div>
+      </div>
+      <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;font-size:12px;color:#795548;margin-bottom:14px;" id="noStudentWarning" style="display:none;">
+        <i class="fas fa-triangle-exclamation" style="margin-right:5px;color:#f9a825;"></i>
+        No student selected. You can still preview and send the report — the email address will need to be entered manually on the Send tab.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="switchReportTab('preview');buildReportPreview()"><i class="fas fa-eye"></i> Preview Report</button>
+        <button class="btn btn-outline-secondary" onclick="closeReportModal()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- TAB: PREVIEW -->
+    <div class="report-section" id="rtab-preview">
+      <div style="font-size:13px;color:#555;margin-bottom:12px;">This is the report that will be emailed to the student.</div>
+      <div class="email-preview">
+        <div class="email-preview-body" id="reportPreviewBody"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="switchReportTab('send');prepSendTab()"><i class="fas fa-paper-plane"></i> Continue to Send</button>
+        <button class="btn btn-outline-secondary" onclick="switchReportTab('lookup')"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+    </div>
+
+    <!-- TAB: SEND -->
+    <div class="report-section" id="rtab-send">
+      <div style="font-size:13px;color:#555;margin-bottom:14px;">Review details then send. The email is sent from your signed-in Gmail account via the Gmail API.</div>
+
+      <div style="display:none;" id="gmailNotSignedInWarn" >
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;font-size:12px;color:#856404;margin-bottom:14px;">
+          <i class="fas fa-triangle-exclamation" style="margin-right:5px;"></i>
+          <strong>Gmail not authorised.</strong> You need to sign in with Google Drive access first. Click the Drive button in the toolbar.
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;"><i class="fas fa-envelope" style="margin-right:4px;color:#aaa;"></i>To</label>
+        <input type="email" id="sendToEmail" placeholder="student@hanoverstudents.org" style="width:100%;font-size:13px;border:1px solid #ccc;border-radius:7px;padding:7px 10px;outline:none;"/>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;"><i class="fas fa-envelope-open" style="margin-right:4px;color:#aaa;"></i>Subject</label>
+        <input type="text" id="sendSubject" style="width:100%;font-size:13px;border:1px solid #ccc;border-radius:7px;padding:7px 10px;outline:none;"/>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px;"><i class="fas fa-comment" style="margin-right:4px;color:#aaa;"></i>Personal note from teacher <span style="color:#aaa;font-weight:400;">(optional)</span></label>
+        <textarea id="sendPersonalNote" rows="3" style="width:100%;font-size:13px;border:1px solid #ccc;border-radius:7px;padding:7px 10px;outline:none;resize:vertical;" placeholder="Add a personal message that will appear at the top of the email..."></textarea>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="sendCcTeacher" style="width:15px;height:15px;"/>
+          CC me on this email (send a copy to the signed-in teacher account)
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-success" onclick="sendReportEmail()" id="btnSendEmail">
+          <i class="fas fa-paper-plane"></i> Send Email
+        </button>
+        <button class="btn btn-outline-secondary" onclick="switchReportTab('preview')"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-outline-secondary" onclick="closeReportModal()">Cancel</button>
+      </div>
+      <div id="sendResult" style="margin-top:10px;font-size:13px;display:none;"></div>
+    </div>
+
+  </div><!-- /report-body -->
+</div>
+</div>
+
+<!-- ══ DRIVE MODAL ════════════════════════════════════════════════ -->
+<div class="overlay" id="driveModal" onclick="if(event.target===this)closeDriveModal()">
+<div class="modal-box">
+  <h4><i class="fab fa-google-drive" style="color:#1a73e8;margin-right:7px;"></i>Google Drive</h4>
+  <p class="modal-sub">Connect your Google account to save and load assessments.</p>
+  <div id="driveNotSignedIn">
+    <div class="drive-opt" onclick="signIn()">
+      <i class="fab fa-google" style="color:#ea4335;"></i>
+      <div><div class="opt-title">Sign in with Google</div><div class="opt-desc">Authorise access to Drive &amp; Sheets</div></div>
+    </div>
+    <div class="client-id-box">
+      <label><i class="fas fa-key" style="margin-right:4px;"></i>Google OAuth Client ID</label>
+      <input type="text" id="clientIdInput" placeholder="xxxx.apps.googleusercontent.com" oninput="saveClientId()"/>
+      <div style="font-size:11px;color:#888;margin-top:4px;">Stored locally. Set once per device.</div>
+    </div>
+    <div class="setup-steps" id="setupGuide" style="display:none;">
+      <strong>How to get your Client ID:</strong>
+      <ol>
+        <li>Go to <a href="https://console.cloud.google.com/" target="_blank">console.cloud.google.com</a></li>
+        <li>Enable <strong>Google Sheets API</strong> and <strong>Google Drive API</strong></li>
+        <li>APIs &amp; Services → Credentials → <strong>Create OAuth 2.0 Client ID</strong></li>
+        <li>Type: <strong>Web application</strong>. Add your URL to Authorised JavaScript Origins.</li>
+        <li>Copy the Client ID and paste above.</li>
+      </ol>
+    </div>
+    <button class="btn btn-sm btn-link" onclick="toggleSetupGuide()" style="font-size:12px;padding:0;margin-top:4px;">
+      <i class="fas fa-circle-question"></i> How do I get a Client ID?
+    </button>
+  </div>
+  <div id="driveSignedIn" style="display:none;">
+    <div style="background:#e8f5e9;border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:9px;margin-bottom:12px;font-size:13px;">
+      <i class="fas fa-circle-check" style="color:#27ae60;font-size:17px;"></i>
+      <div><div style="font-weight:600;" id="signedInName">Signed in</div><div style="font-size:11px;color:#555;" id="signedInEmail"></div></div>
+      <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="signOut()" style="font-size:11px;">Sign out</button>
+    </div>
+    <div class="drive-opt" onclick="saveToNewSheet()"><i class="fas fa-file-excel" style="color:#0f9d58;"></i><div><div class="opt-title">Save as new Google Sheet</div><div class="opt-desc">Creates a new spreadsheet in your Drive</div></div></div>
+    <div class="drive-opt" onclick="saveToBoundSheet()"><i class="fas fa-floppy-disk" style="color:#1a73e8;"></i><div><div class="opt-title">Update existing sheet</div><div class="opt-desc">Overwrite the currently linked spreadsheet</div></div></div>
+    <div class="drive-opt" onclick="loadFromDriveDialog()"><i class="fas fa-folder-open" style="color:#fbbc04;"></i><div><div class="opt-title">Open from Drive</div><div class="opt-desc">Load a saved assessment</div></div></div>
+    <div class="drive-opt" onclick="addToTrackingSheet()"><i class="fas fa-table-list" style="color:#7b1fa2;"></i><div><div class="opt-title">Append to class tracking sheet</div><div class="opt-desc">Add student scores to class roster</div></div></div>
+  </div>
+  <button class="btn btn-outline-secondary w-100 mt-3" onclick="closeDriveModal()">Close</button>
+</div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="overlay" id="histModal" onclick="if(event.target===this)closeHistory()">
+<div class="modal-box">
+  <h4><i class="fas fa-clock-rotate-left" style="color:var(--accent);margin-right:7px;"></i>Saved Assessments</h4>
+  <p class="modal-sub">Assessments auto-saved in this browser.</p>
+  <div id="histList"></div>
+  <button class="btn btn-outline-secondary w-100 mt-3" onclick="closeHistory()">Close</button>
+</div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ══ SCRIPTS ════════════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════════════════════════
+   DEFAULT CONFIG — all editable via admin panel
+   ═══════════════════════════════════════════════════════ */
+const DEFAULT_CONFIG = {
+  sections:[
+    { id:'chords', title:'Chord Shapes', icon:'fas fa-hand-back-fist',
+      subsections:[
+        { label:'Major & Minor Chords', color:'default',
+          items:[
+            {id:'maj1',label:'Major Chord 1',editable:true},
+            {id:'maj2',label:'Major Chord 2',editable:true},
+            {id:'min1',label:'Minor Chord 1',editable:true},
+            {id:'min2',label:'Minor Chord 2',editable:true},
+          ]},
+        { label:'Power Chords', color:'blue',
+          items:[
+            {id:'pwr_e',label:'E-String Power Chord',editable:false},
+            {id:'pwr_a',label:'A-String Power Chord',editable:false},
+          ]},
+        { label:'Barre Chords', color:'amber',
+          items:[
+            {id:'bar_emaj',label:'E Major Type Barre Chord',editable:false},
+            {id:'bar_amaj',label:'A Major Type Barre Chord',editable:false},
+            {id:'bar_emin',label:'E Minor Type Barre Chord',editable:false},
+          ]},
+      ]
+    },
+    { id:'technique', title:'Technique & Performance', icon:'fas fa-music',
+      subsections:[
+        { label:'Technique', color:'default',
+          items:[
+            {id:'scale_g',label:'G Major Scale',editable:false},
+            {id:'song',label:'Song Choice (Verse / Chorus, 3+ Chords)',editable:false},
+            {id:'riff',label:'Riff Performance (2-3-4 String)',editable:false},
+            {id:'strum',label:'Strumming Patterns — G · D · Em · C',editable:false},
+          ]}
+      ]
+    }
+  ],
+  scores:[
+    {v:'4',l:'4',label:'Mastery',c:'a4'},
+    {v:'3',l:'3',label:'Proficient',c:'a3'},
+    {v:'2',l:'2',label:'Developing',c:'a2'},
+    {v:'1',l:'1',label:'Not Achieved',c:'a1'},
+    {v:'0',l:'0',label:'Not Attempted',c:'a0'},
+    {v:'NA',l:'N/A',label:'Not Assessed',c:'ana'},
+  ],
+  classes:['1A','2A','1B','5B'],
+  metaFields:[
+    {id:'studentName',label:'Student',type:'text',placeholder:'Student name...',width:'190px',required:true},
+    {id:'classSelect',label:'Class',type:'select',width:'120px',required:true},
+    {id:'assessDate',label:'Date',type:'date',width:'145px',required:false},
+    {id:'teacherName',label:'Teacher',type:'text',placeholder:'Teacher name...',width:'140px',required:false},
+  ],
+  driveSettings:{ trackingSheetId:'', defaultFolderId:'', configSheetId:'' },
+  adminPin:'1234',
+};
+
+let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let state = {};
+let currentSheetId = null;
+let accessToken = null;
+
+/* ═══ CONFIG PERSISTENCE ═══════════════════════════════════════ */
+function loadConfig(){
+  try{
+    const raw = localStorage.getItem('guitar_config');
+    if(raw) config = JSON.parse(raw);
+  }catch(e){}
+}
+function saveConfig(){
+  localStorage.setItem('guitar_config', JSON.stringify(config));
+}
+
+/* ═══ STATE ════════════════════════════════════════════════════ */
+function getAllItems(){
+  const items=[];
+  config.sections.forEach(sec=>sec.subsections.forEach(sub=>sub.items.forEach(item=>items.push(item))));
+  return items;
+}
+function initState(){
+  state={};
+  getAllItems().forEach(i=>{state[i.id]={score:null,comment:'',chordName:''};});
+}
+
+/* ═══ FORM RENDER ══════════════════════════════════════════════ */
+function renderLegend(){
+  const bar = document.getElementById('legendBar');
+  bar.innerHTML = '<span style="font-size:11px;color:#888;margin-right:4px;">Score:</span>' +
+    config.scores.map(sc=>`<span class="lpill lp${sc.v}">${sc.l} — ${sc.label}</span>`).join('');
+}
+
+function renderStudentBar(){
+  const bar = document.getElementById('studentBar');
+  bar.innerHTML = config.metaFields.map(f=>{
+    let input='';
+    if(f.type==='select'){
+      const opts=config.classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+      input=`<select id="${f.id}" onchange="autoSave()" style="width:${f.width||'120px'}"><option value="">Select...</option>${opts}</select>`;
+    } else if(f.type==='date'){
+      input=`<input type="date" id="${f.id}" oninput="autoSave()" style="width:${f.width||'145px'}"/>`;
+    } else {
+      input=`<input type="text" id="${f.id}" placeholder="${f.placeholder||''}" oninput="autoSave()" style="width:${f.width||'160px'}"/>`;
+    }
+    return `<label><i class="fas fa-user" style="color:#bbb;margin-right:4px;font-size:11px;"></i>${esc(f.label)}</label>${input}`;
+  }).join('');
+  const d=document.getElementById('assessDate');
+  if(d) d.value=new Date().toISOString().split('T')[0];
+}
+
+function subColor(color){
+  if(color==='blue') return 'background:#e8f3fd;color:#1a5276;';
+  if(color==='amber') return 'background:#fdf3e3;color:#784212;';
+  if(color==='green') return 'background:#e8f8f5;color:#145a32;';
+  if(color==='purple') return 'background:#f3eeff;color:#4a235a;';
+  return '';
+}
+
+function makeRow(item){
+  if(!state[item.id]) state[item.id]={score:null,comment:'',chordName:''};
+  const s=state[item.id];
+  const lbl=item.editable
+    ? `${esc(item.label)} <input class="chord-inp" type="text" placeholder="name" value="${esc(s.chordName)}" onchange="setChordName('${item.id}',this.value)"/>`
+    : esc(item.label);
+  const btns=config.scores.map(sc=>
+    `<button class="sb ${s.score===sc.v?sc.c:''}" onclick="setScore('${item.id}','${sc.v}',this)" title="${sc.label}">${sc.l}</button>`
+  ).join('');
+  return `<div class="a-row">
+    <div class="row-lbl">${lbl}</div>
+    <div class="score-btns" id="btns-${item.id}">${btns}</div>
+    <div class="row-cmt"><input type="text" placeholder="Comment..." value="${esc(s.comment)}" onchange="setComment('${item.id}',this.value)"/></div>
+  </div>`;
+}
+
+function renderAssessment(){
+  const wrap=document.getElementById('assessmentSections');
+  wrap.innerHTML=config.sections.map(sec=>{
+    const subsHTML=sec.subsections.map(sub=>{
+      const style=subColor(sub.color);
+      const subHead=style?`<div class="sec-sub" style="${style}">${esc(sub.label)}</div>`:`<div class="sec-sub">${esc(sub.label)}</div>`;
+      return subHead+sub.items.map(makeRow).join('');
+    }).join('');
+    return `<div class="sec-card">
+      <div class="sec-head"><i class="${sec.icon||'fas fa-music'}"></i><span>${esc(sec.title)}</span></div>
+      ${subsHTML}
+    </div>`;
+  }).join('');
+}
+
+function render(){
+  renderLegend();
+  renderStudentBar();
+  renderAssessment();
+  updateSummary();
+  restoreFromStorage();
+}
+
+/* ═══ STATE MUTATIONS ══════════════════════════════════════════ */
+function setScore(id,val,btn){
+  if(!state[id]) state[id]={score:null,comment:'',chordName:''};
+  state[id].score=state[id].score===val?null:val;
+  const c=document.getElementById('btns-'+id);
+  if(c) c.querySelectorAll('.sb').forEach((b,i)=>{
+    b.className='sb '+(state[id].score===config.scores[i].v?config.scores[i].c:'');
+  });
+  updateSummary(); autoSave();
+}
+function setComment(id,val){if(!state[id])state[id]={score:null,comment:'',chordName:''};state[id].comment=val;autoSave();}
+function setChordName(id,val){if(!state[id])state[id]={score:null,comment:'',chordName:''};state[id].chordName=val;autoSave();}
+
+/* ═══ SUMMARY ══════════════════════════════════════════════════ */
+function updateSummary(){
+  const all=getAllItems();
+  const scored=all.map(i=>(state[i.id]||{}).score).filter(s=>s&&s!=='NA');
+  const cnt={};config.scores.forEach(s=>{if(s.v!=='NA')cnt[s.v]=0;});
+  scored.forEach(s=>{if(cnt[s]!==undefined)cnt[s]++;});
+  const tot=scored.length;
+  const assessed=all.filter(i=>(state[i.id]||{}).score!==null).length;
+  const avg=tot?(scored.reduce((a,b)=>a+parseFloat(b),0)/tot).toFixed(2):'—';
+  const prof=config.scores.filter(s=>parseFloat(s.v)>=3).map(s=>s.v);
+  const pct=tot?Math.round((scored.filter(s=>prof.includes(s)).length/tot)*100):0;
+  document.getElementById('statGrid').innerHTML=`
+    <div class="stat-box"><div class="stat-num" style="color:var(--accent)">${assessed}/${all.length}</div><div class="stat-lbl">Assessed</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#1a73e8">${avg}</div><div class="stat-lbl">Avg Score</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#27ae60">${pct}%</div><div class="stat-lbl">Proficient+</div></div>
+    ${config.scores.filter(s=>s.v!=='NA').slice(0,3).map(s=>`<div class="stat-box"><div class="stat-num" style="color:var(--s${s.v})">${cnt[s.v]||0}</div><div class="stat-lbl">${s.label}</div></div>`).join('')}
+  `;
+  const colors=['#27ae60','#2980b9','#f39c12','#e74c3c','#95a5a6'];
+  const numScores=config.scores.filter(s=>s.v!=='NA');
+  document.getElementById('progBar').innerHTML=tot
+    ?numScores.map((s,i)=>`<div class="pseg" style="width:${Math.round(((cnt[s.v]||0)/tot)*100)}%;background:${colors[i]||'#ccc'};"></div>`).join('')
+    :'<div class="pseg" style="width:100%;background:#eee;"></div>';
+  document.getElementById('progLegend').innerHTML=tot
+    ?numScores.map((s,i)=>`<span style="font-size:11px;color:${colors[i]||'#ccc'};"><strong>${cnt[s.v]||0}</strong> × ${s.v}</span>`).join(''):'';
+}
+
+/* ═══ FORM META ════════════════════════════════════════════════ */
+function getFormMeta(){
+  const m={};
+  config.metaFields.forEach(f=>{const el=document.getElementById(f.id);if(el)m[f.id]=el.value;});
+  m.comments=document.getElementById('overallComments').value;
+  return m;
+}
+function setFormMeta(m){
+  if(!m)return;
+  config.metaFields.forEach(f=>{const el=document.getElementById(f.id);if(el&&m[f.id]!==undefined)el.value=m[f.id];});
+  if(m.comments!==undefined){const ta=document.getElementById('overallComments');if(ta)ta.value=m.comments;}
+}
+
+/* ═══ LOCAL-FIRST SYNC ENGINE (Option D) ══════════════════════
+   Every score tap → instant localStorage write (never blocks UI)
+   Background timer → pushes to Google Sheet every N seconds
+   Online/offline detection → queues writes, flushes on reconnect
+   beforeunload → final flush attempt on tab close
+   ══════════════════════════════════════════════════════════════ */
+
+let syncTimer = null;
+let syncPending = false;       // unsaved changes exist
+let syncInFlight = false;      // a sync is currently running
+let isOnline = navigator.onLine;
+let lastSyncedAt = null;
+let syncIntervalSeconds = 60;
+
+/* ── Online / offline detection ──────────────────────────── */
+window.addEventListener('online',  () => { isOnline=true;  updateOfflineBadge(); if(syncPending) scheduleSyncNow(); });
+window.addEventListener('offline', () => { isOnline=false; updateOfflineBadge(); });
+
+function updateOfflineBadge(){
+  document.getElementById('offlineBadge').style.display = isOnline ? 'none' : 'inline-flex';
+}
+
+/* ── Mark dirty → schedule sync ─────────────────────────── */
+function markDirty(){
+  syncPending = true;
+  updateSyncBadge();
+}
+
+function updateSyncBadge(){
+  const badge   = document.getElementById('syncBadge');
+  const syncing = document.getElementById('syncingBadge');
+  if(syncInFlight){ badge.style.display='none'; syncing.style.display='inline-flex'; return; }
+  syncing.style.display = 'none';
+  if(syncPending && accessToken && currentSheetId){
+    badge.style.display = 'inline-flex';
+    const txt = lastSyncedAt
+      ? 'Last synced ' + formatRelativeTime(lastSyncedAt)
+      : 'Pending sync';
+    document.getElementById('syncBadgeText').textContent = txt;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function formatRelativeTime(ts){
+  const s = Math.round((Date.now()-ts)/1000);
+  if(s<10) return 'just now';
+  if(s<60) return s+'s ago';
+  return Math.round(s/60)+'m ago';
+}
+
+/* ── Background timer management ────────────────────────── */
+function startSyncTimer(){
+  stopSyncTimer();
+  if(syncIntervalSeconds <= 0) return;
+  syncTimer = setInterval(backgroundSync, syncIntervalSeconds * 1000);
+}
+function stopSyncTimer(){ if(syncTimer){ clearInterval(syncTimer); syncTimer=null; } }
+
+function scheduleSyncNow(){
+  // Debounce: sync after 2s idle instead of immediately on every keystroke
+  clearTimeout(window._syncDebounce);
+  window._syncDebounce = setTimeout(backgroundSync, 2000);
+}
+
+/* ── Core background sync ────────────────────────────────── */
+async function backgroundSync(){
+  if(!syncPending)  return;
+  if(syncInFlight)  return;
+  if(!isOnline)     return;
+  if(!accessToken)  return;
+
+  // Need a linked sheet — create one silently if not yet linked
+  if(!currentSheetId){
+    const m = getFormMeta();
+    const nm = config.metaFields.find(f=>f.id==='studentName');
+    const student = nm&&m[nm.id] ? m[nm.id] : 'Student';
+    if(!student || student==='Student') return; // don't auto-create blank sheets
+    try{
+      await silentCreateSheet(student, m);
+    }catch(e){ return; }
+  }
+
+  syncInFlight = true;
+  updateSyncBadge();
+
+  try{
+    await writeSheetData(currentSheetId);
+    syncPending  = false;
+    lastSyncedAt = Date.now();
+    setStatus('Synced','ok');
+  }catch(e){
+    // Token may have expired — try a silent re-auth next cycle
+    if(e.message&&e.message.includes('401')) accessToken = null;
+    setStatus('Sync error','');
+  }finally{
+    syncInFlight = false;
+    updateSyncBadge();
+  }
+}
+
+async function silentCreateSheet(student, m){
+  const title = `Guitar Assessment — ${student} — ${m.assessDate||new Date().toISOString().split('T')[0]}`;
+  const cr = await fetch('https://sheets.googleapis.com/v4/spreadsheets',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({properties:{title},sheets:[{properties:{title:'Assessment'}}]})
+  });
+  const sheet = await cr.json();
+  if(!sheet.spreadsheetId) throw new Error('Create failed');
+  currentSheetId = sheet.spreadsheetId;
+  const folder = config.driveSettings.defaultFolderId;
+  if(folder){
+    await fetch(`https://www.googleapis.com/drive/v3/files/${currentSheetId}?addParents=${folder}`,{
+      method:'PATCH',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:'{}'
+    });
+  }
+  autoSave(); // persist the new sheetId
+}
+
+/* ── Tab-close flush ──────────────────────────────────────── */
+window.addEventListener('beforeunload', e => {
+  if(!syncPending || !accessToken || !currentSheetId) return;
+  // Use sendBeacon for a best-effort fire-and-forget on close
+  // Sheets API requires JSON so we fall back to a flag in localStorage
+  // so the next page load re-syncs immediately
+  localStorage.setItem('guitar_sync_on_load','1');
+});
+
+/* ═══ LOCAL STORAGE ════════════════════════════════════════════ */
+function autoSave(){
+  const badge=document.getElementById('saveBadge');
+  badge.style.display='inline-flex';
+  setTimeout(()=>badge.style.display='none',1800);
+  try{
+    const data={...getFormMeta(),state:JSON.parse(JSON.stringify(state)),sheetId:currentSheetId,saved:Date.now()};
+    localStorage.setItem('guitar_current',JSON.stringify(data));
+  }catch(e){}
+  markDirty();
+  if(accessToken && currentSheetId) scheduleSyncNow();
+}
+function saveToHistory(){
+  try{
+    const id='guitar_hist_'+Date.now();
+    const data={...getFormMeta(),state:JSON.parse(JSON.stringify(state)),sheetId:currentSheetId,saved:Date.now()};
+    localStorage.setItem(id,JSON.stringify(data));
+    const keys=JSON.parse(localStorage.getItem('guitar_hist_keys')||'[]');
+    keys.unshift(id);
+    if(keys.length>20){localStorage.removeItem(keys.pop());}
+    localStorage.setItem('guitar_hist_keys',JSON.stringify(keys));
+  }catch(e){}
+}
+function restoreFromStorage(){
+  try{
+    const raw=localStorage.getItem('guitar_current');
+    if(!raw)return;
+    const data=JSON.parse(raw);
+    setFormMeta(data);
+    if(data.state)getAllItems().forEach(i=>{if(data.state[i.id])state[i.id]=data.state[i.id];});
+    if(data.sheetId)currentSheetId=data.sheetId;
+    renderAssessment();
+    updateSummary();
+  }catch(e){}
+}
+function clearForm(){
+  if(!confirm('Reset all scores and comments?'))return;
+  initState(); currentSheetId=null;
+  config.metaFields.forEach(f=>{const el=document.getElementById(f.id);if(el)el.value='';});
+  const d=document.getElementById('assessDate');if(d)d.value=new Date().toISOString().split('T')[0];
+  const ta=document.getElementById('overallComments');if(ta)ta.value='';
+  renderAssessment(); updateSummary(); toast('Form reset','fas fa-rotate-left');
+}
+function newAssessment(){if(!confirm('Start a new blank assessment?'))return;clearForm();}
+
+/* ═══ HISTORY MODAL ════════════════════════════════════════════ */
+function openHistory(){
+  const keys=JSON.parse(localStorage.getItem('guitar_hist_keys')||'[]');
+  const list=document.getElementById('histList');
+  if(!keys.length){list.innerHTML='<em style="color:#aaa;font-size:13px;">No saved assessments yet.</em>';}
+  else{
+    list.innerHTML=keys.map(k=>{
+      try{
+        const d=JSON.parse(localStorage.getItem(k));if(!d)return'';
+        const nm=config.metaFields.find(f=>f.id==='studentName');
+        const student=nm&&d[nm.id]?d[nm.id]:'Unnamed';
+        const cls=d.classSelect||'';
+        const dt=d.assessDate||new Date(d.saved).toLocaleDateString();
+        return `<div class="hist-row">
+          <div><div class="hist-name">${esc(student)}</div><div class="hist-meta">${esc(cls)} · ${dt}</div></div>
+          <button class="btn btn-sm btn-outline-primary" onclick="loadHistory('${k}')">Load</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteHistory('${k}',this)"><i class="fas fa-trash"></i></button>
+        </div>`;
+      }catch(e){return'';}
+    }).join('');
+  }
+  document.getElementById('histModal').classList.add('open');
+}
+function closeHistory(){document.getElementById('histModal').classList.remove('open');}
+function loadHistory(key){
+  try{
+    const d=JSON.parse(localStorage.getItem(key));if(!d)return;
+    initState();setFormMeta(d);
+    if(d.state)getAllItems().forEach(i=>{if(d.state[i.id])state[i.id]=d.state[i.id];});
+    if(d.sheetId)currentSheetId=d.sheetId;
+    renderAssessment();updateSummary();closeHistory();
+    toast('Assessment loaded','fas fa-folder-open');
+  }catch(e){toast('Error loading','fas fa-triangle-exclamation','#e74c3c');}
+}
+function deleteHistory(key,btn){
+  localStorage.removeItem(key);
+  const keys=JSON.parse(localStorage.getItem('guitar_hist_keys')||'[]');
+  localStorage.setItem('guitar_hist_keys',JSON.stringify(keys.filter(k=>k!==key)));
+  btn.closest('.hist-row').remove();
+}
+
+/* ═══ CSV EXPORT ═══════════════════════════════════════════════ */
+function exportCSV(){
+  const m=getFormMeta();
+  let csv='Guitar Class Final Assessment\n';
+  config.metaFields.forEach(f=>{csv+=`"${f.label}","${m[f.id]||''}",`;});
+  csv+='\n\nSection,Sub-Section,Assessment Target,Score,Comment\n';
+  config.sections.forEach(sec=>{
+    sec.subsections.forEach(sub=>{
+      sub.items.forEach(item=>{
+        const s=state[item.id]||{};
+        const lbl=item.editable&&s.chordName?`${item.label} (${s.chordName})`:item.label;
+        csv+=`"${sec.title}","${sub.label}","${lbl}","${s.score||''}","${(s.comment||'').replace(/"/g,"'")}"\n`;
+      });
+    });
+  });
+  csv+=`\nOverall Comments,"${(m.comments||'').replace(/"/g,"'")}"\n`;
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const nm=m.studentName||m[config.metaFields[0]?.id]||'student';
+  a.download=`guitar_${nm.replace(/\s/g,'_')}_${m.assessDate||'undated'}.csv`;
+  a.click();
+  toast('CSV downloaded','fas fa-file-csv');
+}
+
+/* ═══ PIN SYSTEM ═══════════════════════════════════════════════ */
+function promptAdminPin(){
+  ['p0','p1','p2','p3'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('pinError').textContent='';
+  document.getElementById('pinOverlay').classList.add('open');
+  setTimeout(()=>{const p=document.getElementById('p0');if(p)p.focus();},100);
+}
+function closePinModal(){document.getElementById('pinOverlay').classList.remove('open');}
+function pinInput(idx){
+  const val=document.getElementById('p'+idx).value;
+  if(val&&idx<3)setTimeout(()=>document.getElementById('p'+(idx+1)).focus(),50);
+  if(idx===3&&val) checkPin();
+}
+function pinKey(e,idx){
+  if(e.key==='Backspace'&&!document.getElementById('p'+idx).value&&idx>0)
+    setTimeout(()=>document.getElementById('p'+(idx-1)).focus(),10);
+  if(e.key==='Enter') checkPin();
+}
+function checkPin(){
+  const entered=['p0','p1','p2','p3'].map(id=>document.getElementById(id).value).join('');
+  if(entered===config.adminPin){
+    closePinModal(); openAdmin();
+  }else{
+    document.getElementById('pinError').textContent='Incorrect PIN. Please try again.';
+    ['p0','p1','p2','p3'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('p0').focus();
+  }
+}
+
+/* ═══ ADMIN PANEL ══════════════════════════════════════════════ */
+function openAdmin(){
+  populateAdminSections();
+  populateAdminClasses();
+  populateDriveSettings();
+  document.getElementById('adminOverlay').classList.add('open');
+}
+function closeAdmin(){document.getElementById('adminOverlay').classList.remove('open');}
+function switchTab(id){
+  document.querySelectorAll('.admin-tab').forEach((t,i)=>{t.classList.toggle('active',['sections','classes','drive','settings'][i]===id);});
+  document.querySelectorAll('.admin-section').forEach(s=>{s.classList.toggle('active',s.id==='tab-'+id);});
+}
+
+/* ── SECTIONS BUILDER ──────────────────────────────────────── */
+function populateAdminSections(){
+  const wrap=document.getElementById('sectionsBuilder');
+  wrap.innerHTML=config.sections.map((sec,si)=>`
+    <div class="sec-builder" id="sec-b-${si}">
+      <div class="sec-builder-head">
+        <i class="${sec.icon||'fas fa-music'}" style="color:var(--accent);font-size:14px;"></i>
+        <input type="text" value="${esc(sec.title)}" onchange="config.sections[${si}].title=this.value" placeholder="Section title..."/>
+        <button class="btn-icon" style="color:#e74c3c;border-color:#e74c3c;" onclick="removeSection(${si})" title="Delete section"><i class="fas fa-trash"></i></button>
+      </div>
+      <div class="sec-builder-body">
+        ${sec.subsections.map((sub,subi)=>`
+          <div class="subsec-row">
+            <i class="fas fa-grip-vertical drag-handle" style="font-size:12px;color:#ccc;"></i>
+            <input type="text" value="${esc(sub.label)}" onchange="config.sections[${si}].subsections[${subi}].label=this.value" placeholder="Sub-section label..."/>
+            <select onchange="config.sections[${si}].subsections[${subi}].color=this.value" style="font-size:11px;border:1px solid #ddd;border-radius:5px;padding:2px 5px;outline:none;">
+              ${['default','blue','amber','green','purple'].map(c=>`<option value="${c}" ${sub.color===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+            <button class="btn-icon" onclick="removeSubsection(${si},${subi})" title="Delete sub-section"><i class="fas fa-trash"></i></button>
+          </div>
+          <div style="padding:0 0 6px 10px;">
+            ${sub.items.map((item,ii)=>`
+              <div class="item-row" draggable="true" data-sec="${si}" data-sub="${subi}" data-item="${ii}">
+                <i class="fas fa-grip-vertical drag-handle"></i>
+                <input class="item-name" type="text" value="${esc(item.label)}" onchange="config.sections[${si}].subsections[${subi}].items[${ii}].label=this.value"/>
+                <div class="cb-wrap">
+                  <input type="checkbox" id="ed_${si}_${subi}_${ii}" ${item.editable?'checked':''} onchange="config.sections[${si}].subsections[${subi}].items[${ii}].editable=this.checked"/>
+                  <label for="ed_${si}_${subi}_${ii}">Editable</label>
+                </div>
+                <button class="btn-icon" onclick="removeItem(${si},${subi},${ii})"><i class="fas fa-trash"></i></button>
+              </div>`).join('')}
+            <div class="add-item-row">
+              <input type="text" placeholder="+ Add item..." id="newItem_${si}_${subi}" onkeydown="if(event.key==='Enter')addItem(${si},${subi})"/>
+              <button class="btn-icon add" onclick="addItem(${si},${subi})"><i class="fas fa-plus"></i></button>
+            </div>
+          </div>
+        `).join('')}
+        <button class="btn btn-sm btn-outline-secondary mt-1" onclick="addSubsection(${si})"><i class="fas fa-plus"></i> Add sub-section</button>
+      </div>
+    </div>`).join('');
+  setupDragDrop();
+}
+
+function addSection(){
+  config.sections.push({id:'sec_'+Date.now(),title:'New Section',icon:'fas fa-music',subsections:[{label:'Items',color:'default',items:[]}]});
+  populateAdminSections();
+}
+function removeSection(si){
+  if(!confirm('Delete this section?'))return;
+  config.sections.splice(si,1);
+  populateAdminSections();
+}
+function addSubsection(si){
+  config.sections[si].subsections.push({label:'New Sub-section',color:'default',items:[]});
+  populateAdminSections();
+}
+function removeSubsection(si,subi){
+  config.sections[si].subsections.splice(subi,1);
+  populateAdminSections();
+}
+function addItem(si,subi){
+  const inp=document.getElementById(`newItem_${si}_${subi}`);
+  if(!inp||!inp.value.trim())return;
+  config.sections[si].subsections[subi].items.push({id:'item_'+Date.now(),label:inp.value.trim(),editable:false});
+  inp.value='';
+  populateAdminSections();
+}
+function removeItem(si,subi,ii){
+  config.sections[si].subsections[subi].items.splice(ii,1);
+  populateAdminSections();
+}
+function saveAndApplySections(){
+  saveConfig();
+  initState();
+  renderAssessment();
+  updateSummary();
+  closeAdmin();
+  toast('Sections saved & applied','fas fa-check-circle','#27ae60');
+}
+function resetSectionsToDefault(){
+  if(!confirm('Reset sections to the default template?'))return;
+  config.sections=JSON.parse(JSON.stringify(DEFAULT_CONFIG.sections));
+  populateAdminSections();
+}
+
+/* ── DRAG & DROP ROWS ──────────────────────────────────────── */
+function setupDragDrop(){
+  document.querySelectorAll('.item-row[draggable]').forEach(row=>{
+    row.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('text/plain',JSON.stringify({si:+row.dataset.sec,subi:+row.dataset.sub,ii:+row.dataset.item}));
+      row.style.opacity='.4';
+    });
+    row.addEventListener('dragend',()=>row.style.opacity='1');
+    row.addEventListener('dragover',e=>{e.preventDefault();row.classList.add('drag-over');});
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault();row.classList.remove('drag-over');
+      try{
+        const from=JSON.parse(e.dataTransfer.getData('text/plain'));
+        const to={si:+row.dataset.sec,subi:+row.dataset.sub,ii:+row.dataset.item};
+        if(from.si===to.si&&from.subi===to.subi&&from.ii!==to.ii){
+          const arr=config.sections[from.si].subsections[from.subi].items;
+          const [moved]=arr.splice(from.ii,1);
+          arr.splice(to.ii,0,moved);
+          populateAdminSections();
+        }
+      }catch(err){}
+    });
+  });
+}
+
+/* ── CLASSES BUILDER ───────────────────────────────────────── */
+function populateAdminClasses(){
+  renderClassTags();
+  const mf=document.getElementById('metaFieldsBuilder');
+  mf.innerHTML=config.metaFields.map((f,i)=>`
+    <div class="meta-field-row">
+      <i class="fas fa-grip-vertical" style="color:#ccc;font-size:13px;"></i>
+      <input type="text" value="${esc(f.label)}" onchange="config.metaFields[${i}].label=this.value" placeholder="Label..."/>
+      <select onchange="config.metaFields[${i}].type=this.value" style="font-size:12px;border:1px solid #ddd;border-radius:6px;padding:4px 6px;outline:none;">
+        ${['text','select','date'].map(t=>`<option value="${t}" ${f.type===t?'selected':''}>${t}</option>`).join('')}
+      </select>
+      <input type="text" value="${esc(f.placeholder||'')}" onchange="config.metaFields[${i}].placeholder=this.value" placeholder="Placeholder..." style="flex:1;"/>
+      <input type="text" value="${esc(f.width||'160px')}" onchange="config.metaFields[${i}].width=this.value" placeholder="Width" style="width:70px;"/>
+      ${f.required?'<span style="font-size:11px;color:#888;white-space:nowrap;">required</span>':
+        `<button class="btn-icon" onclick="config.metaFields.splice(${i},1);populateAdminClasses()"><i class="fas fa-trash"></i></button>`}
+    </div>`).join('');
+}
+function renderClassTags(){
+  document.getElementById('classTagsWrap').innerHTML=config.classes.map((c,i)=>
+    `<span class="class-tag">${esc(c)}<button onclick="removeClassCode(${i})" title="Remove">×</button></span>`
+  ).join('');
+}
+function addClassCode(){
+  const inp=document.getElementById('newClassInput');
+  const v=inp.value.trim();
+  if(!v)return;
+  if(!config.classes.includes(v)) config.classes.push(v);
+  inp.value=''; renderClassTags();
+}
+function removeClassCode(i){ config.classes.splice(i,1); renderClassTags(); }
+function addMetaField(){
+  const l=document.getElementById('newMetaLabel').value.trim();
+  if(!l)return;
+  const t=document.getElementById('newMetaType').value;
+  config.metaFields.push({id:'meta_'+Date.now(),label:l,type:t,placeholder:l+'...',width:'160px',required:false});
+  document.getElementById('newMetaLabel').value='';
+  populateAdminClasses();
+}
+function saveAndApplyClasses(){
+  saveConfig(); renderStudentBar(); closeAdmin();
+  toast('Classes & fields saved','fas fa-check-circle','#27ae60');
+}
+
+/* ── DRIVE SETTINGS ────────────────────────────────────────── */
+function populateDriveSettings(){
+  const cid=getClientId();
+  document.getElementById('adminClientId').value=cid;
+  document.getElementById('adminTrackId').value=config.driveSettings.trackingSheetId||localStorage.getItem('guitar_tracking_sheet_id')||'';
+  document.getElementById('adminFolderId').value=config.driveSettings.defaultFolderId||'';
+  document.getElementById('adminConfigSheetId').value=config.driveSettings.configSheetId||'';
+  const sel=document.getElementById('adminSyncInterval');
+  if(sel) sel.value=String(config.driveSettings.syncInterval||60);
+}
+function adminSaveCid(){
+  const v=document.getElementById('adminClientId').value.trim();
+  localStorage.setItem('guitar_gapi_client_id',v);
+  document.getElementById('clientIdInput').value=v;
+  if(v) document.getElementById('configBanner').classList.add('hidden');
+  initTokenClient();
+}
+function saveDriveSettings(){
+  config.driveSettings.trackingSheetId=document.getElementById('adminTrackId').value.trim();
+  config.driveSettings.defaultFolderId=document.getElementById('adminFolderId').value.trim();
+  config.driveSettings.configSheetId=document.getElementById('adminConfigSheetId').value.trim();
+  const sel=document.getElementById('adminSyncInterval');
+  if(sel){ config.driveSettings.syncInterval=parseInt(sel.value)||60; syncIntervalSeconds=config.driveSettings.syncInterval; }
+  if(config.driveSettings.trackingSheetId) localStorage.setItem('guitar_tracking_sheet_id',config.driveSettings.trackingSheetId);
+  saveConfig();
+  // Restart timer with new interval
+  if(accessToken) startSyncTimer();
+  toast('Drive settings saved','fas fa-check-circle','#27ae60');
+}
+
+/* ── SETTINGS TAB ──────────────────────────────────────────── */
+function saveNewPin(){
+  const v=document.getElementById('newPinInput').value.trim();
+  if(!/^\d{4}$/.test(v)){toast('PIN must be exactly 4 digits','fas fa-triangle-exclamation','#e74c3c');return;}
+  config.adminPin=v;
+  saveConfig();
+  document.getElementById('newPinInput').value='';
+  toast('PIN updated','fas fa-lock','#27ae60');
+}
+function exportConfig(){
+  const blob=new Blob([JSON.stringify(config,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='guitar_assessment_config.json';
+  a.click();
+  toast('Config exported','fas fa-download');
+}
+function importConfig(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const parsed=JSON.parse(ev.target.result);
+      config=parsed; saveConfig();
+      initState(); render();
+      toast('Config imported & applied','fas fa-upload','#27ae60');
+      closeAdmin();
+    }catch(err){toast('Invalid config file','fas fa-triangle-exclamation','#e74c3c');}
+  };
+  r.readAsText(file);
+}
+function resetAllConfig(){
+  if(!confirm('Reset ALL configuration to defaults? This cannot be undone.'))return;
+  config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  saveConfig(); initState(); render();
+  toast('Config reset to defaults','fas fa-rotate-left');
+  closeAdmin();
+}
+
+/* ═══ CONFIG SHEET SYNC ════════════════════════════════════════ */
+async function pushConfigToSheet(){
+  const sheetId=config.driveSettings.configSheetId;
+  if(!sheetId){toast('No config sheet ID set','fas fa-triangle-exclamation','#f39c12');return;}
+  if(!accessToken){toast('Not signed in to Drive','fas fa-triangle-exclamation','#e74c3c');return;}
+  try{
+    const configJson=JSON.stringify(config);
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Config!A1?valueInputOption=USER_ENTERED`,{
+      method:'PUT',
+      headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      body:JSON.stringify({range:'Config!A1',majorDimension:'ROWS',values:[['guitar_assessment_config'],[configJson]]})
+    });
+    toast('Config pushed to Google Sheet','fas fa-upload','#27ae60');
+  }catch(e){toast('Push failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');}
+}
+async function pullConfigFromSheet(){
+  const sheetId=config.driveSettings.configSheetId;
+  if(!sheetId){toast('No config sheet ID set','fas fa-triangle-exclamation','#f39c12');return;}
+  if(!accessToken){toast('Not signed in to Drive','fas fa-triangle-exclamation','#e74c3c');return;}
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Config!A2`,{
+      headers:{Authorization:'Bearer '+accessToken}
+    });
+    const data=await r.json();
+    const raw=data.values&&data.values[0]&&data.values[0][0];
+    if(!raw)throw new Error('No config data found');
+    config=JSON.parse(raw);
+    saveConfig(); initState(); render();
+    populateAdminSections(); populateAdminClasses(); populateDriveSettings();
+    toast('Config pulled from Google Sheet','fas fa-download','#27ae60');
+  }catch(e){toast('Pull failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');}
+}
+
+/* ═══ GOOGLE AUTH ══════════════════════════════════════════════ */
+const SCOPES='https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose';
+let tokenClient=null;
+
+function loadGoogleAPIs(){
+  const s1=document.createElement('script');
+  s1.src='https://apis.google.com/js/api.js';
+  s1.onload=()=>{gapi.load('client',initGapiClient);};
+  document.head.appendChild(s1);
+  const s2=document.createElement('script');
+  s2.src='https://accounts.google.com/gsi/client';
+  s2.onload=initTokenClient;
+  document.head.appendChild(s2);
+}
+async function initGapiClient(){
+  try{
+    await gapi.client.init({discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
+  }catch(e){console.warn('GAPI init',e);}
+}
+function initTokenClient(){
+  const cid=getClientId();if(!cid)return;
+  try{
+    tokenClient=google.accounts.oauth2.initTokenClient({
+      client_id:cid,scope:SCOPES,callback:handleToken
+    });
+  }catch(e){console.warn('GIS init',e);}
+}
+function handleToken(resp){
+  if(resp.error){toast('Sign-in failed: '+resp.error,'fas fa-triangle-exclamation','#e74c3c');return;}
+  accessToken=resp.access_token;
+  if(typeof gapi!=='undefined')gapi.client.setToken({access_token:accessToken});
+  fetchUserInfo();
+}
+async function fetchUserInfo(){
+  try{
+    const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+accessToken}});
+    const u=await r.json();
+    setSignedIn(u.name||u.email,u.email);
+    closeDriveModal();
+    toast('Signed in as '+u.email,'fab fa-google');
+    document.getElementById('btnLoadDrive').style.display='inline-flex';
+    if(config.driveSettings.configSheetId) await pullConfigFromSheet();
+    // Start background sync timer now that we have a token
+    startSyncTimer();
+    // If a previous session flagged pending changes, sync immediately
+    if(localStorage.getItem('guitar_sync_on_load')==='1'){
+      localStorage.removeItem('guitar_sync_on_load');
+      syncPending=true; scheduleSyncNow();
+    }
+  }catch(e){toast('User info error','fas fa-triangle-exclamation','#e74c3c');}
+}
+function setSignedIn(name,email){
+  signedInEmail = email;
+  document.getElementById('driveNotSignedIn').style.display='none';
+  document.getElementById('driveSignedIn').style.display='block';
+  document.getElementById('signedInName').textContent=name;
+  document.getElementById('signedInEmail').textContent=email;
+  document.getElementById('userEmail').textContent=email;
+  document.getElementById('userBadge').style.display='inline-flex';
+  document.getElementById('statusDot').className='sdot ok';
+  document.getElementById('statusText').textContent='Connected: '+email;
+}
+function signIn(){
+  const cid=getClientId();
+  if(!cid){toast('Enter your Client ID first','fas fa-key','#f39c12');return;}
+  if(!tokenClient)initTokenClient();
+  if(!tokenClient){toast('Google APIs not loaded yet, please wait','fas fa-triangle-exclamation','#e74c3c');return;}
+  tokenClient.requestAccessToken({prompt:'consent'});
+}
+function signOut(){
+  if(accessToken)google.accounts.oauth2.revoke(accessToken,()=>{});
+  accessToken=null;
+  stopSyncTimer();
+  document.getElementById('driveNotSignedIn').style.display='block';
+  document.getElementById('driveSignedIn').style.display='none';
+  document.getElementById('userBadge').style.display='none';
+  document.getElementById('btnLoadDrive').style.display='none';
+  document.getElementById('statusDot').className='sdot';
+  document.getElementById('statusText').textContent='Not connected';
+  document.getElementById('syncBadge').style.display='none';
+  document.getElementById('syncingBadge').style.display='none';
+  toast('Signed out','fas fa-right-from-bracket');
+  closeDriveModal();
+}
+
+/* ═══ SHEETS INTEGRATION ═══════════════════════════════════════ */
+function buildSheetValues(){
+  const m=getFormMeta();
+  const headerRow=config.metaFields.map(f=>f.label);
+  const metaRow=config.metaFields.map(f=>m[f.id]||'');
+  const rows=[
+    ['Guitar Class Final Assessment'],
+    headerRow,metaRow,[],
+    ['','ASSESSMENT TARGET','4 (Mastery)','3 (Proficient)','2 (Developing)','1 (Not Achieved)','0 (Not Attempted)','Not Assessed','Score','Comments'],
+  ];
+  config.sections.forEach(sec=>{
+    rows.push([sec.title]);
+    sec.subsections.forEach(sub=>{
+      rows.push(['',sub.label]);
+      sub.items.forEach(item=>{
+        const s=state[item.id]||{};
+        const lbl=item.editable&&s.chordName?`${item.label} (${s.chordName})`:item.label;
+        const r=['',lbl,'','','','','','',s.score||'',s.comment||''];
+        if(s.score&&s.score!=='NA'){const idx={'4':2,'3':3,'2':4,'1':5,'0':6}[s.score];if(idx!==undefined)r[idx]='✓';}
+        else if(s.score==='NA')r[7]='✓';
+        rows.push(r);
+      });
+    });
+    rows.push([]);
+  });
+  rows.push(['Overall Comments:',m.comments||'']);
+  return rows;
+}
+async function saveToNewSheet(){
+  if(!accessToken){toast('Not signed in','fas fa-triangle-exclamation','#e74c3c');return;}
+  closeDriveModal(); setStatus('Saving...','busy');
+  try{
+    const m=getFormMeta();
+    const nm=config.metaFields.find(f=>f.id==='studentName');
+    const student=nm&&m[nm.id]?m[nm.id]:'Student';
+    const title=`Guitar Assessment — ${student} — ${m.assessDate||new Date().toISOString().split('T')[0]}`;
+    const body={properties:{title},sheets:[{properties:{title:'Assessment'}}]};
+    const folder=config.driveSettings.defaultFolderId;
+    const cr=await fetch('https://sheets.googleapis.com/v4/spreadsheets',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    const sheet=await cr.json();
+    if(!sheet.spreadsheetId)throw new Error(sheet.error?.message||'Create failed');
+    currentSheetId=sheet.spreadsheetId;
+    if(folder){
+      await fetch(`https://www.googleapis.com/drive/v3/files/${currentSheetId}?addParents=${folder}`,{
+        method:'PATCH',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:'{}'
+      });
+    }
+    await writeSheetData(currentSheetId);
+    syncPending=false; lastSyncedAt=Date.now(); updateSyncBadge();
+    setStatus('Saved','ok'); saveToHistory(); autoSave();
+    toast('Saved: '+title,'fas fa-circle-check','#27ae60');
+    startSyncTimer();
+    setTimeout(()=>{if(confirm('Open in Google Sheets?'))window.open('https://docs.google.com/spreadsheets/d/'+currentSheetId,'_blank');},500);
+  }catch(e){setStatus('Error','');toast('Save failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');}
+}
+async function saveToBoundSheet(){
+  if(!currentSheetId){await saveToNewSheet();return;}
+  if(!accessToken){toast('Not signed in','fas fa-triangle-exclamation','#e74c3c');return;}
+  closeDriveModal(); setStatus('Updating...','busy');
+  try{await writeSheetData(currentSheetId);syncPending=false;lastSyncedAt=Date.now();updateSyncBadge();setStatus('Saved','ok');saveToHistory();autoSave();toast('Sheet updated','fas fa-circle-check','#27ae60');}
+  catch(e){setStatus('Error','');toast('Update failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');}
+}
+async function writeSheetData(sheetId){
+  const values=buildSheetValues();
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Assessment!A1?valueInputOption=USER_ENTERED`,{
+    method:'PUT',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({range:'Assessment!A1',majorDimension:'ROWS',values})
+  });
+  await applyFormatting(sheetId);
+}
+async function applyFormatting(sheetId){
+  const req=[
+    {repeatCell:{range:{sheetId:0,startRowIndex:0,endRowIndex:1,startColumnIndex:0,endColumnIndex:10},
+      cell:{userEnteredFormat:{backgroundColor:{red:.102,green:.102,blue:.18},textFormat:{foregroundColor:{red:1,green:1,blue:1},bold:true,fontSize:13}}},
+      fields:'userEnteredFormat(backgroundColor,textFormat)'}},
+    {repeatCell:{range:{sheetId:0,startRowIndex:4,endRowIndex:5,startColumnIndex:0,endColumnIndex:10},
+      cell:{userEnteredFormat:{backgroundColor:{red:.2,green:.2,blue:.3},textFormat:{foregroundColor:{red:1,green:1,blue:1},bold:true}}},
+      fields:'userEnteredFormat(backgroundColor,textFormat)'}},
+    {updateSheetProperties:{properties:{sheetId:0,gridProperties:{frozenRowCount:5}},fields:'gridProperties.frozenRowCount'}},
+    {autoResizeDimensions:{dimensions:{sheetId:0,dimension:'COLUMNS',startIndex:0,endIndex:10}}}
+  ];
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`,{
+    method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({requests:req})
+  });
+}
+async function loadFromDriveDialog(){
+  if(!accessToken){toast('Please sign in first','fas fa-triangle-exclamation','#e74c3c');return;}
+  closeDriveModal(); setStatus('Searching...','busy');
+  try{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name+contains+'Guitar+Assessment'&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc`,{
+      headers:{Authorization:'Bearer '+accessToken}
+    });
+    const data=await r.json();
+    setStatus('Connected','ok');
+    if(!data.files||!data.files.length){toast('No Guitar Assessment files found','fas fa-folder-open');return;}
+    showFilePicker(data.files);
+  }catch(e){setStatus('Error','');toast('Search failed','fas fa-triangle-exclamation','#e74c3c');}
+}
+function showFilePicker(files){
+  document.getElementById('histList').innerHTML=files.map(f=>`
+    <div class="hist-row">
+      <div><div class="hist-name">${esc(f.name)}</div><div class="hist-meta">${new Date(f.modifiedTime).toLocaleDateString()}</div></div>
+      <button class="btn btn-sm btn-outline-primary" onclick="loadSheetById('${f.id}','${esc(f.name)}')">Open</button>
+    </div>`).join('');
+  document.getElementById('histModal').classList.add('open');
+}
+async function loadSheetById(fileId,fileName){
+  closeHistory(); setStatus('Loading...','busy');
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${fileId}/values/Assessment`,{headers:{Authorization:'Bearer '+accessToken}});
+    const data=await r.json();
+    parseSheetIntoState(data.values||[]);
+    currentSheetId=fileId;
+    renderAssessment(); updateSummary(); setStatus('Connected','ok'); autoSave();
+    toast('Loaded: '+fileName,'fas fa-folder-open');
+  }catch(e){setStatus('Error','');toast('Load failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');}
+}
+function parseSheetIntoState(rows){
+  try{
+    const metaRow=rows[2]||[];
+    config.metaFields.forEach((f,i)=>{const el=document.getElementById(f.id);if(el&&metaRow[i])el.value=metaRow[i];});
+    initState();
+    const allItems=getAllItems();
+    rows.slice(5).forEach(row=>{
+      if(!row||row.length<2)return;
+      const lbl=(row[1]||'').toLowerCase().replace(/\s*\(.*?\)/g,'').trim();
+      const item=allItems.find(i=>i.label.toLowerCase().includes(lbl)||lbl.includes(i.label.toLowerCase()));
+      if(!item)return;
+      const s=state[item.id];
+      s.score=row[8]||null;
+      s.comment=row[9]||'';
+      const m=(row[1]||'').match(/\(([^)]+)\)/);
+      if(m)s.chordName=m[1];
+    });
+    const last=rows[rows.length-1]||[];
+    if(last[0]==='Overall Comments:'){const ta=document.getElementById('overallComments');if(ta)ta.value=last[1]||'';}
+  }catch(e){console.warn('Parse error',e);}
+}
+async function addToTrackingSheet(){
+  if(!accessToken){toast('Not signed in','fas fa-triangle-exclamation','#e74c3c');return;}
+  closeDriveModal();
+  let trackId=config.driveSettings.trackingSheetId||localStorage.getItem('guitar_tracking_sheet_id');
+  if(!trackId){
+    const cr=await fetch('https://sheets.googleapis.com/v4/spreadsheets',{
+      method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      body:JSON.stringify({properties:{title:'Guitar Class Tracking Sheet'},sheets:[{properties:{title:'Tracking'}}]})
+    });
+    const sh=await cr.json();
+    trackId=sh.spreadsheetId;
+    localStorage.setItem('guitar_tracking_sheet_id',trackId);
+    config.driveSettings.trackingSheetId=trackId; saveConfig();
+    const headers=[config.metaFields.map(f=>f.label).concat(getAllItems().map(i=>i.label)).concat(['Avg Score','Overall Comments'])];
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${trackId}/values/Tracking!A1?valueInputOption=USER_ENTERED`,{
+      method:'PUT',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      body:JSON.stringify({range:'Tracking!A1',majorDimension:'ROWS',values:headers})
+    });
+  }
+  const m=getFormMeta();
+  const all=getAllItems();
+  const scores=all.map(i=>(state[i.id]||{}).score||'');
+  const numeric=scores.filter(s=>s&&s!=='NA').map(Number);
+  const avg=numeric.length?(numeric.reduce((a,b)=>a+b,0)/numeric.length).toFixed(2):'';
+  const row=[config.metaFields.map(f=>m[f.id]||'').concat(scores).concat([avg,m.comments||''])];
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${trackId}/values/Tracking!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{
+    method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+    body:JSON.stringify({majorDimension:'ROWS',values:row})
+  });
+  toast('Added to tracking sheet','fas fa-table-list','#7b1fa2');
+  setTimeout(()=>{if(confirm('Open tracking sheet?'))window.open('https://docs.google.com/spreadsheets/d/'+trackId,'_blank');},500);
+}
+function saveToDrive(){
+  if(!accessToken){openDriveModal();return;}
+  if(currentSheetId)saveToBoundSheet();else saveToNewSheet();
+}
+
+/* ═══ DRIVE MODAL ══════════════════════════════════════════════ */
+function openDriveModal(){document.getElementById('driveModal').classList.add('open');}
+function closeDriveModal(){document.getElementById('driveModal').classList.remove('open');}
+function toggleSetupGuide(){const g=document.getElementById('setupGuide');g.style.display=g.style.display==='none'?'block':'none';}
+function openSetupGuide(){openDriveModal();setTimeout(()=>document.getElementById('setupGuide').style.display='block',100);}
+
+/* ═══ UTILS ════════════════════════════════════════════════════ */
+function getClientId(){return localStorage.getItem('guitar_gapi_client_id')||'';}
+function saveClientId(){
+  const v=document.getElementById('clientIdInput').value.trim();
+  localStorage.setItem('guitar_gapi_client_id',v);
+  if(v){document.getElementById('configBanner').classList.add('hidden');initTokenClient();}
+}
+function setStatus(text,st){
+  document.getElementById('statusText').textContent=text;
+  document.getElementById('statusDot').className='sdot'+(st==='ok'?' ok':st==='busy'?' busy':'');
+}
+function toast(msg,icon,color){
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML=`<i class="${icon||'fas fa-circle-check'}" style="color:${color||'var(--accent)'};font-size:13px;"></i> ${msg}`;
+  document.getElementById('toastWrap').appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),280);},3000);
+}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ═══════════════════════════════════════════════════════════════
+   STUDENT DATABASE
+   ═══════════════════════════════════════════════════════════════ */
+const STUDENT_DB = [
+  {email:'rcostello27@hanoverstudents.org',name:'Costello, Ryan',grade:11,cls:'Guitar 1 - 2A - Wade'},
+  {email:'amartin29@hanoverstudents.org',name:'Martin, Aiden',grade:9,cls:'Guitar 1 - 2A - Wade'},
+  {email:'isviridov27@hanoverstudents.org',name:'Sviridov, Ivan',grade:11,cls:'Guitar 1 - 2A - Wade'},
+  {email:'mcostello26@hanoverstudents.org',name:'Costello, Matthew',grade:12,cls:'Guitar 1 - 2B - Harden'},
+  {email:'bdouglas26@hanoverstudents.org',name:'Douglas, Benjamin',grade:12,cls:'Guitar 1 - 2B - Harden'},
+  {email:'jkelliher26@hanoverstudents.org',name:'Kelliher, Jacob',grade:12,cls:'Guitar 1 - 2B - Harden'},
+  {email:'aparker26@hanoverstudents.org',name:'Parker, Anna',grade:12,cls:'Guitar 1 - 2B - Harden'},
+  {email:'mbell26@hanoverstudents.org',name:'Bell, Matthew',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'fgardner26@hanoverstudents.org',name:'Gardner, Flynn',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'cgeary26@hanoverstudents.org',name:'Geary, Conlan',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'choward26@hanoverstudents.org',name:'Howard, Colin',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'lhurley26@hanoverstudents.org',name:'Hurley, Layla',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'mleblanc27@hanoverstudents.org',name:'LeBlanc, Martin',grade:11,cls:'Guitar 1 - 5A - Wade'},
+  {email:'jlynch26@hanoverstudents.org',name:'Lynch, Joseph',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'smahoney26@hanoverstudents.org',name:'Mahoney, Shane',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'jmcdermod26@hanoverstudents.org',name:'McDermod, James',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'tmichalski29@hanoverstudents.org',name:'Michalski, Tyler',grade:9,cls:'Guitar 1 - 5A - Wade'},
+  {email:'apatel29@hanoverstudents.org',name:'Patel, Aarav',grade:9,cls:'Guitar 1 - 5A - Wade'},
+  {email:'ebryant28@hanoverstudents.org',name:'Bryant, Evan',grade:10,cls:'Guitar 1 - 6B - Harden'},
+  {email:'bdacosta28@hanoverstudents.org',name:'DaCosta, Benjamin',grade:10,cls:'Guitar 1 - 6B - Harden'},
+  {email:'tdunne28@hanoverstudents.org',name:'Dunne, Thomas',grade:10,cls:'Guitar 1 - 6B - Harden'},
+  {email:'chines29@hanoverstudents.org',name:'Hines, Charles',grade:9,cls:'Guitar 1 - 6B - Harden'},
+  {email:'tkmito28@hanoverstudents.org',name:'Kmito, Tyler',grade:10,cls:'Guitar 1 - 6B - Harden'},
+  {email:'tlamond28@hanoverstudents.org',name:'Lamond, Tristan',grade:10,cls:'Guitar 1 - 6B - Harden'},
+  {email:'alaskos27@hanoverstudents.org',name:'Laskos, Alexander',grade:11,cls:'Guitar 1 - 6B - Harden'},
+  {email:'edelaney29@hanoverstudents.org',name:'Delaney, Ethan',grade:9,cls:'Guitar 1 - 7A - Wade'},
+  {email:'jgonzales27@hanoverstudents.org',name:'Gonzales Aponte, Jeremiah',grade:11,cls:'Guitar 1 - 7A - Wade'},
+  {email:'hhsmusic@hanoverstudents.org',name:'Harden, Matt',grade:12,cls:'Guitar 1 - 7A - Wade'},
+  {email:'tjewson26@hanoverstudents.org',name:'Jewson, Tyler',grade:12,cls:'Guitar 1 - 7A - Wade'},
+  {email:'nnjenga27@hanoverstudents.org',name:'Njenga, Nate',grade:11,cls:'Guitar 2 - 2A - Wade'},
+  {email:'cmurphy28@hanoverstudents.org',name:'Murphy, Cullen',grade:10,cls:'Guitar 2 - 2B - Harden'},
+  {email:'srowsell26@hanoverstudents.org',name:'Rowsell, Sophia',grade:12,cls:'Guitar 2 - 2B - Harden'},
+  {email:'bmortland27@hanoverstudents.org',name:'Mortland, Brady',grade:11,cls:'Guitar 2 - 5A - Wade'},
+  {email:'treimer28@hanoverstudents.org',name:'Reimer, Thomas',grade:10,cls:'Guitar 2 - 5A - Wade'},
+  {email:'bswenson26@hanoverstudents.org',name:'Swenson, Bryce',grade:12,cls:'Guitar 2 - 5A - Wade'},
+  {email:'mfreeman27@hanoverstudents.org',name:'Freeman, Mila',grade:11,cls:'Guitar 1 - 2A - Wade'},
+  {email:'tsullivan26@hanoverstudents.org',name:'Sullivan, Tim',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'bpeterson26@hanoverstudents.org',name:'Peterson, Bradley',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'tleibfarth26@hanoverstudents.org',name:'Leibfarth, Trevor',grade:12,cls:'Guitar 1 - 5A - Wade'},
+  {email:'clloyd27@hanoverstudents.org',name:'Lloyd, Caden',grade:11,cls:'Guitar 1 - 7A - Wade'},
+  {email:'lmonahan29@hanoverstudents.org',name:'Monahan, Liam',grade:9,cls:'Guitar 1 - 6B - Harden'},
+  {email:'jduff27@hanoverstudents.org',name:'Duff, Joseph',grade:11,cls:'Guitar 1 - 7A - Wade'},
+  {email:'dgarufi29@hanoverstudents.org',name:'Garufi, Dom',grade:9,cls:'Guitar 1 -7A - Wade'},
+];
+
+let selectedStudent = null;
+let signedInEmail = '';
+
+/* ═══ REPORT MODAL ══════════════════════════════════════════════ */
+function openReportModal(){
+  // Auto-fill search from student name field if populated
+  const nm = config.metaFields.find(f=>f.id==='studentName');
+  const nameVal = nm ? (document.getElementById(nm.id)||{}).value||'' : '';
+  if(nameVal){
+    document.getElementById('studentSearchInput').value = nameVal;
+    searchStudents(nameVal);
+  }
+  document.getElementById('reportModal').classList.add('open');
+  switchReportTab('lookup');
+}
+function closeReportModal(){ document.getElementById('reportModal').classList.remove('open'); }
+function switchReportTab(id){
+  document.querySelectorAll('.report-tab').forEach((t,i)=>t.classList.toggle('active',['lookup','preview','send'][i]===id));
+  document.querySelectorAll('.report-section').forEach(s=>s.classList.toggle('active',s.id==='rtab-'+id));
+}
+
+/* ═══ STUDENT LOOKUP ════════════════════════════════════════════ */
+function searchStudents(query){
+  const q = query.toLowerCase().trim();
+  const res = document.getElementById('lookupResults');
+  if(!q){ res.style.display='none'; return; }
+  const matches = STUDENT_DB.filter(s=>
+    s.name.toLowerCase().includes(q) ||
+    s.cls.toLowerCase().includes(q) ||
+    s.email.toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!matches.length){ res.style.display='none'; return; }
+  res.innerHTML = matches.map((s,i)=>`
+    <div class="lookup-row" onclick="selectStudent(${STUDENT_DB.indexOf(s)})">
+      <div>
+        <div class="lk-name">${highlightMatch(s.name,q)}</div>
+        <div class="lk-meta">${s.email} &nbsp;·&nbsp; Grade ${s.grade} &nbsp;·&nbsp; ${s.cls}</div>
+      </div>
+      <i class="fas fa-chevron-right" style="color:#ccc;font-size:11px;"></i>
+    </div>`).join('');
+  res.style.display='block';
+}
+function highlightMatch(text, q){
+  const idx = text.toLowerCase().indexOf(q);
+  if(idx<0) return esc(text);
+  return esc(text.slice(0,idx))+'<strong>'+esc(text.slice(idx,idx+q.length))+'</strong>'+esc(text.slice(idx+q.length));
+}
+function selectStudent(idx){
+  selectedStudent = STUDENT_DB[idx];
+  document.getElementById('ssName').textContent = selectedStudent.name;
+  document.getElementById('ssEmail').textContent = selectedStudent.email;
+  document.getElementById('ssGrade').textContent = selectedStudent.grade;
+  document.getElementById('ssClass').textContent = selectedStudent.cls;
+  document.getElementById('selectedStudentBox').style.display='block';
+  document.getElementById('lookupResults').style.display='none';
+  document.getElementById('noStudentWarning').style.display='none';
+}
+function clearSelectedStudent(){
+  selectedStudent=null;
+  document.getElementById('selectedStudentBox').style.display='none';
+  document.getElementById('studentSearchInput').value='';
+  document.getElementById('noStudentWarning').style.display='block';
+}
+
+/* ═══ REPORT HTML BUILDER ═══════════════════════════════════════ */
+const SCORE_COLORS = {'4':'#27ae60','3':'#2980b9','2':'#f39c12','1':'#e74c3c','0':'#95a5a6','NA':'#bdc3c7'};
+const SCORE_LABELS = {'4':'Mastery','3':'Proficient','2':'Developing','1':'Not Achieved','0':'Not Attempted','NA':'Not Assessed'};
+
+function buildReportHTML(personalNote){
+  const m = getFormMeta();
+  const all = getAllItems();
+  const scored = all.map(i=>(state[i.id]||{}).score).filter(s=>s&&s!=='NA');
+  const avg = scored.length ? (scored.reduce((a,b)=>a+parseFloat(b),0)/scored.length).toFixed(2) : '—';
+  const prof = scored.length ? Math.round((scored.filter(s=>s==='3'||s==='4').length/scored.length)*100) : 0;
+  const assessed = all.filter(i=>(state[i.id]||{}).score!==null).length;
+  const nm = config.metaFields.find(f=>f.id==='studentName');
+  const studentDisplayName = selectedStudent
+    ? selectedStudent.name.split(',').reverse().join(' ').trim()
+    : (nm&&m[nm.id] ? m[nm.id] : 'Student');
+  const teacherField = config.metaFields.find(f=>f.id==='teacherName');
+  const teacher = teacherField&&m[teacherField.id] ? m[teacherField.id] : 'Your Guitar Teacher';
+  const dateStr = m.assessDate ? new Date(m.assessDate+'T00:00:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  let sectionsHTML = '';
+  config.sections.forEach(sec=>{
+    sectionsHTML += `<div class="rpt-section-title">${esc(sec.title)}</div>`;
+    sec.subsections.forEach(sub=>{
+      if(sub.label && sec.subsections.length > 1)
+        sectionsHTML += `<div style="font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:.5px;padding:4px 22px 2px;font-weight:600;">${esc(sub.label)}</div>`;
+      sub.items.forEach(item=>{
+        const s = state[item.id]||{};
+        const lbl = item.editable&&s.chordName ? `${item.label} (${s.chordName})` : item.label;
+        const scoreVal = s.score||null;
+        const pillStyle = scoreVal ? `background:${SCORE_COLORS[scoreVal]||'#ccc'};` : '';
+        const pillClass = scoreVal ? 'rpt-score-pill' : 'rpt-score-pill rpt-score-ns';
+        const pillText = scoreVal ? (scoreVal+' — '+(SCORE_LABELS[scoreVal]||scoreVal)) : 'Not assessed';
+        sectionsHTML += `<div class="rpt-row">
+          <div class="rpt-row-label">${esc(lbl)}</div>
+          <span class="${pillClass}" style="${pillStyle}">${pillText}</span>
+          ${s.comment ? `<div class="rpt-comment">"${esc(s.comment)}"</div>` : ''}
+        </div>`;
+      });
+    });
+  });
+
+  const noteHTML = personalNote ? `
+    <div style="background:#fff8e1;border-left:4px solid #e8b86d;padding:12px 16px;margin:0 22px 0;border-radius:0 6px 6px 0;font-size:13px;color:#444;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#999;margin-bottom:5px;">Note from ${esc(teacher)}</div>
+      ${esc(personalNote).replace(/\n/g,'<br/>')}
+    </div>` : '';
+
+  return `<div class="rpt">
+    <div class="rpt-hero">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:28px;">🎸</span>
+        <div>
+          <h2>Guitar Class Assessment Report</h2>
+          <p>Hanover School Music Department</p>
+        </div>
+      </div>
+    </div>
+    <div class="rpt-meta">
+      <div class="rpt-meta-pill"><strong>Student:</strong> ${esc(studentDisplayName)}</div>
+      <div class="rpt-meta-pill"><strong>Class:</strong> ${esc(m.classSelect||selectedStudent?.cls||'')}</div>
+      <div class="rpt-meta-pill"><strong>Grade:</strong> ${selectedStudent?selectedStudent.grade:(m.grade||'')}</div>
+      <div class="rpt-meta-pill"><strong>Teacher:</strong> ${esc(teacher)}</div>
+      <div class="rpt-meta-pill"><strong>Date:</strong> ${dateStr}</div>
+    </div>
+    ${noteHTML}
+    ${sectionsHTML}
+    <div class="rpt-summary">
+      <div style="font-size:12px;font-weight:600;color:#666;margin-right:6px;">Summary</div>
+      <div class="rpt-stat"><div class="sn" style="color:#e8b86d;">${assessed}/${all.length}</div><div class="sl">Assessed</div></div>
+      <div class="rpt-stat"><div class="sn" style="color:#1a73e8;">${avg}</div><div class="sl">Avg Score</div></div>
+      <div class="rpt-stat"><div class="sn" style="color:#27ae60;">${prof}%</div><div class="sl">Proficient+</div></div>
+    </div>
+    ${m.comments ? `<div style="padding:10px 22px;font-size:12px;color:#555;background:#fafafa;border-top:1px solid #f0f0f0;"><strong>Overall Comments:</strong> ${esc(m.comments)}</div>` : ''}
+    <div class="rpt-footer">This report was generated by the Hanover School Guitar Assessment App. For questions, please contact your teacher.</div>
+  </div>`;
+}
+
+function buildReportPreview(){
+  const html = buildReportHTML('');
+  document.getElementById('reportPreviewBody').innerHTML = html;
+}
+
+/* ═══ SEND TAB PREP ═════════════════════════════════════════════ */
+function prepSendTab(){
+  const m = getFormMeta();
+  const nm = config.metaFields.find(f=>f.id==='studentName');
+  const studentName = selectedStudent
+    ? selectedStudent.name.split(',').reverse().join(' ').trim()
+    : (nm&&m[nm.id]?m[nm.id]:'Student');
+  const teacherField = config.metaFields.find(f=>f.id==='teacherName');
+  const teacher = teacherField&&m[teacherField.id]?m[teacherField.id]:'';
+  const dateStr = m.assessDate||new Date().toISOString().split('T')[0];
+
+  if(selectedStudent)
+    document.getElementById('sendToEmail').value = selectedStudent.email;
+  document.getElementById('sendSubject').value =
+    `Guitar Class Assessment Report — ${studentName} — ${dateStr}`;
+  document.getElementById('sendResult').style.display='none';
+
+  const warn = document.getElementById('gmailNotSignedInWarn');
+  warn.style.display = accessToken ? 'none' : 'block';
+}
+
+/* ═══ GMAIL SEND ════════════════════════════════════════════════ */
+async function sendReportEmail(){
+  const toEmail = document.getElementById('sendToEmail').value.trim();
+  if(!toEmail){ toast('Please enter a recipient email','fas fa-triangle-exclamation','#e74c3c'); return; }
+  if(!accessToken){ toast('Please sign in with Google first','fas fa-triangle-exclamation','#e74c3c'); return; }
+
+  const subject = document.getElementById('sendSubject').value.trim();
+  const personalNote = document.getElementById('sendPersonalNote').value.trim();
+  const ccTeacher = document.getElementById('sendCcTeacher').checked;
+  const btn = document.getElementById('btnSendEmail');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-rotate fa-spin"></i> Sending…';
+
+  const reportHtml = buildReportHTML(personalNote);
+
+  // Full email HTML wrapper with inline styles for email clients
+  const emailBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <style>
+    body{margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Helvetica,Arial,sans-serif;}
+    .wrap{max-width:680px;margin:20px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);}
+    .top-bar{background:#1a1a2e;padding:14px 22px;border-bottom:3px solid #e8b86d;}
+    .top-bar p{margin:0;color:#aaa;font-size:12px;}
+    .rpt{font-family:'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#222;line-height:1.6;}
+    .rpt-hero{background:#1a1a2e;color:white;padding:20px 22px;}
+    .rpt-hero h2{margin:0 0 3px;font-size:18px;font-weight:700;}
+    .rpt-hero p{margin:0;font-size:12px;color:#aaa;}
+    .rpt-meta{display:flex;flex-wrap:wrap;gap:8px;padding:12px 22px;background:#f8f6f2;border-bottom:1px solid #e5e5e5;}
+    .rpt-meta-pill{background:white;border:1px solid #e0e0e0;border-radius:20px;padding:3px 12px;font-size:11px;color:#555;display:inline-block;margin:2px;}
+    .rpt-meta-pill strong{color:#333;}
+    .rpt-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#888;padding:12px 22px 5px;border-top:1px solid #f0f0f0;}
+    .rpt-row{display:flex;align-items:center;padding:7px 22px;border-bottom:1px solid #f8f8f8;gap:10px;}
+    .rpt-row-label{flex:1;font-size:13px;color:#333;}
+    .rpt-score-pill{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;color:white;white-space:nowrap;}
+    .rpt-score-ns{background:#eee;color:#aaa;}
+    .rpt-comment{font-size:11px;color:#888;font-style:italic;}
+    .rpt-summary{padding:14px 22px;background:#f8f6f2;border-top:1px solid #e5e5e5;}
+    .rpt-stat{display:inline-block;text-align:center;background:white;border:1px solid #e0e0e0;border-radius:8px;padding:8px 14px;min-width:70px;margin-right:8px;}
+    .rpt-stat .sn{font-size:20px;font-weight:700;line-height:1;}
+    .rpt-stat .sl{font-size:10px;color:#888;margin-top:2px;}
+    .rpt-footer{padding:12px 22px;font-size:11px;color:#aaa;border-top:1px solid #f0f0f0;text-align:center;}
+  </style></head><body>
+  <div class="wrap">${reportHtml}</div>
+  </body></html>`;
+
+  // Build RFC 2822 message
+  const m = getFormMeta();
+  const teacherField = config.metaFields.find(f=>f.id==='teacherName');
+  const teacher = teacherField&&m[teacherField.id] ? m[teacherField.id] : 'Guitar Teacher';
+  let raw = [
+    `To: ${toEmail}`,
+    ccTeacher && signedInEmail ? `Cc: ${signedInEmail}` : '',
+    `From: ${teacher} <${signedInEmail||toEmail}>`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: text/html; charset=UTF-8`,
+    ``,
+    emailBody
+  ].filter(Boolean).join('\r\n');
+
+  // Base64url encode
+  const encoded = btoa(unescape(encodeURIComponent(raw)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+
+  try{
+    const resp = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      body: JSON.stringify({raw: encoded})
+    });
+    const result = await resp.json();
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Send Email';
+    if(result.id){
+      const res = document.getElementById('sendResult');
+      res.style.display='block';
+      res.innerHTML=`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;">
+        <i class="fas fa-circle-check" style="color:#27ae60;margin-right:6px;"></i>
+        <strong>Email sent successfully</strong> to ${esc(toEmail)}.
+        <div style="font-size:11px;color:#555;margin-top:3px;">Message ID: ${result.id}</div>
+      </div>`;
+      toast('Report emailed to '+toEmail,'fas fa-envelope','#27ae60');
+    } else {
+      throw new Error(result.error?.message||'Send failed');
+    }
+  }catch(e){
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Send Email';
+    const res = document.getElementById('sendResult');
+    res.style.display='block';
+    res.innerHTML=`<div style="background:#fdecea;border:1px solid #ef9a9a;border-radius:8px;padding:10px 14px;">
+      <i class="fas fa-triangle-exclamation" style="color:#e74c3c;margin-right:6px;"></i>
+      <strong>Send failed:</strong> ${esc(e.message||'Unknown error')}
+    </div>`;
+    toast('Email send failed','fas fa-triangle-exclamation','#e74c3c');
+  }
+}
+
+/* ═══ INIT ══════════════════════════════════════════════════════ */
+(function init(){
+  loadConfig();
+  syncIntervalSeconds = config.driveSettings.syncInterval || 60;
+  initState();
+  render();
+  updateOfflineBadge();
+  const cid=getClientId();
+  if(cid){
+    document.getElementById('clientIdInput').value=cid;
+    document.getElementById('configBanner').classList.add('hidden');
+  }
+  loadGoogleAPIs();
+  // Refresh the "last synced X ago" badge text every 15s
+  setInterval(updateSyncBadge, 15000);
+})();
+</script>
+</body>
+</html>
