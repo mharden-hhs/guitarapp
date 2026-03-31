@@ -1610,6 +1610,7 @@ function handleToken(resp){
   fetchUserInfo();
 }
 async function fetchUserInfo(){
+  if(!accessToken) return;
   try{
     const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+accessToken}});
     const u=await r.json();
@@ -1617,7 +1618,9 @@ async function fetchUserInfo(){
     closeDriveModal();
     toast('Signed in as '+u.email,'fab fa-google');
     document.getElementById('btnLoadDrive').style.display='inline-flex';
-    if(config.driveSettings.configSheetId) await pullConfigFromSheet();
+    // Pull shared config from Drive sheet only if a valid sheet ID is configured
+    const cfgId = (config.driveSettings.configSheetId||'').trim();
+    if(cfgId && cfgId.length > 10) await pullConfigFromSheet();
     // Start background sync timer now that we have a token
     startSyncTimer();
     // If a previous session flagged pending changes, sync immediately
@@ -1628,6 +1631,7 @@ async function fetchUserInfo(){
   }catch(e){toast('User info error','fas fa-triangle-exclamation','#e74c3c');}
 }
 function setSignedIn(name,email){
+  if(!email) return;
   signedInEmail = email;
   document.getElementById('driveNotSignedIn').style.display='none';
   document.getElementById('driveSignedIn').style.display='block';
