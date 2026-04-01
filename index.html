@@ -1801,9 +1801,20 @@ async function pullConfigFromSheet(silent=false){
       {headers:{Authorization:'Bearer '+accessToken}}
     );
     const data=await r.json();
-    if(data.error) throw new Error(data.error.message);
+    // "Unable to parse range" means the Config tab doesn't exist yet — not an error, just not pushed yet
+    if(data.error){
+      const msg = data.error.message||'';
+      const tabMissing = msg.includes('Unable to parse range') || msg.includes('not found') || msg.includes('does not exist');
+      if(tabMissing){
+        console.info('Config tab not yet created — push config first');
+        if(!silent) toast('No config found — push your settings first','fas fa-circle-info','#1a73e8');
+        if(!silent) setStatus('Connected','ok');
+        return;
+      }
+      throw new Error(msg);
+    }
     const raw=data.values&&data.values[0]&&data.values[0][0];
-    if(!raw) throw new Error('No config data found in Config tab — push first');
+    if(!raw) throw new Error('Config tab exists but is empty — push settings first');
     config=JSON.parse(raw);
     config.driveSettings.configSheetId = sheetId;
     saveConfig(); initState(); render();
@@ -1813,7 +1824,7 @@ async function pullConfigFromSheet(silent=false){
   }catch(e){
     if(!silent){ setStatus('Error',''); toast('Pull failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c'); }
     console.info('pullConfigFromSheet:', e.message);
-    throw e; // re-throw so callers can catch
+    throw e;
   }
 }
 
