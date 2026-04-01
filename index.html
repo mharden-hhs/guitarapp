@@ -694,6 +694,25 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
 
 <div class="toast-wrap" id="toastWrap"></div>
 
+<!-- ══ CONFIRM MODAL ══════════════════════════════════════════════ -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content" style="border-radius:14px;overflow:hidden;border:none;box-shadow:0 8px 40px rgba(0,0,0,.18);">
+      <div class="modal-header" style="background:var(--dk);border:none;padding:14px 20px;">
+        <h5 class="modal-title" id="confirmModalTitle" style="color:white;font-size:15px;font-weight:700;margin:0;display:flex;align-items:center;gap:9px;">
+          <i id="confirmModalIcon" class="fas fa-triangle-exclamation" style="color:var(--accent);font-size:16px;"></i>
+          <span id="confirmModalTitleText"></span>
+        </h5>
+      </div>
+      <div class="modal-body" style="padding:18px 20px;font-size:14px;color:#444;" id="confirmModalBody"></div>
+      <div class="modal-footer" style="border:none;padding:10px 16px 16px;gap:8px;">
+        <button type="button" class="btn btn-outline-secondary" id="confirmModalCancel" data-bs-dismiss="modal" style="border-radius:8px;font-size:13px;">Cancel</button>
+        <button type="button" class="btn" id="confirmModalOk" style="border-radius:8px;font-size:13px;font-weight:600;">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ SCRIPTS ════════════════════════════════════════════════════ -->
 <script>
 /* ═══════════════════════════════════════════════════════
@@ -1253,8 +1272,7 @@ function restoreFromStorage(){
     updateSummary();
   }catch(e){}
 }
-function clearForm(){
-  if(!confirm('Reset all scores and comments?'))return;
+function _doReset(){
   initState(); currentSheetId=null;
   selectedStudent=null; sbResults=[]; sbHighlight=-1;
   const inp=document.getElementById('sbInput');
@@ -1266,7 +1284,22 @@ function clearForm(){
   resetAutoComplete();
   renderAssessment(); updateSummary(); toast('Form reset','fas fa-rotate-left');
 }
-function newAssessment(){if(!confirm('Start a new blank assessment?'))return;clearForm();}
+function clearForm(){
+  showConfirm({
+    title:'Reset assessment',
+    body:'This will clear all scores, comments and student selection. This cannot be undone.',
+    okLabel:'Reset', okClass:'btn-danger', icon:'fas fa-rotate-left',
+    onOk: _doReset
+  });
+}
+function newAssessment(){
+  showConfirm({
+    title:'New assessment',
+    body:'Start a blank assessment? Any unsaved changes to the current form will be lost.',
+    okLabel:'New assessment', okClass:'btn-danger', icon:'fas fa-plus',
+    onOk: _doReset
+  });
+}
 
 /* ═══ HISTORY MODAL ════════════════════════════════════════════ */
 function openHistory(){
@@ -1424,9 +1457,12 @@ function addSection(){
   populateAdminSections();
 }
 function removeSection(si){
-  if(!confirm('Delete this section?'))return;
-  config.sections.splice(si,1);
-  populateAdminSections();
+  showConfirm({
+    title:'Delete section',
+    body:`Delete the section "<strong>${esc(config.sections[si]?.title||'')}</strong>" and all its items?`,
+    okLabel:'Delete', okClass:'btn-danger', icon:'fas fa-trash',
+    onOk(){ config.sections.splice(si,1); populateAdminSections(); }
+  });
 }
 function addSubsection(si){
   config.sections[si].subsections.push({label:'New Sub-section',color:'default',items:[]});
@@ -1456,9 +1492,12 @@ function saveAndApplySections(){
   toast('Sections saved & applied','fas fa-check-circle','#27ae60');
 }
 function resetSectionsToDefault(){
-  if(!confirm('Reset sections to the default template?'))return;
-  config.sections=JSON.parse(JSON.stringify(DEFAULT_CONFIG.sections));
-  populateAdminSections();
+  showConfirm({
+    title:'Reset to default template',
+    body:'This will replace all current sections and items with the original Guitar assessment template. Any custom sections will be lost.',
+    okLabel:'Reset to default', okClass:'btn-warning', icon:'fas fa-rotate-left',
+    onOk(){ config.sections=JSON.parse(JSON.stringify(DEFAULT_CONFIG.sections)); populateAdminSections(); }
+  });
 }
 
 /* ── DRAG & DROP ROWS ──────────────────────────────────────── */
@@ -1609,11 +1648,17 @@ function importConfig(e){
   r.readAsText(file);
 }
 function resetAllConfig(){
-  if(!confirm('Reset ALL configuration to defaults? This cannot be undone.'))return;
-  config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-  saveConfig(); initState(); render();
-  toast('Config reset to defaults','fas fa-rotate-left');
-  closeAdmin();
+  showConfirm({
+    title:'Reset all configuration',
+    body:'<strong>This cannot be undone.</strong> All sections, classes, teachers, and settings will be wiped and restored to factory defaults.',
+    okLabel:'Reset everything', okClass:'btn-danger', icon:'fas fa-triangle-exclamation',
+    onOk(){
+      config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+      saveConfig(); initState(); render();
+      toast('Config reset to defaults','fas fa-rotate-left');
+      closeAdmin();
+    }
+  });
 }
 
 /* ═══ CONFIG SHEET SYNC ════════════════════════════════════════ */
@@ -1943,7 +1988,14 @@ async function saveToDrive(){
   if(sharedId){
     await saveToSharedSheet(false);
     const url = 'https://docs.google.com/spreadsheets/d/'+sharedId;
-    setTimeout(()=>{ if(confirm('Open shared sheet in Google Sheets?')) window.open(url,'_blank'); },600);
+    setTimeout(()=>{
+      showConfirm({
+        title:'Saved successfully',
+        body:`Assessment saved to the "<strong>${esc(getAssessmentName())}</strong>" tab. Would you like to open the shared sheet?`,
+        okLabel:'Open sheet', okClass:'btn-primary', icon:'fas fa-table',
+        onOk(){ window.open(url,'_blank'); }
+      });
+    },400);
   } else {
     toast('No shared sheet configured. Go to Admin → Drive Settings to add the Sheet ID.','fas fa-triangle-exclamation','#f39c12');
     openDriveModal();
@@ -2124,6 +2176,29 @@ function toast(msg,icon,color){
   setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),280);},3000);
 }
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ─── Reusable confirm modal ──────────────────────────────────
+   showConfirm({ title, body, okLabel, okClass, icon, onOk })
+   Returns immediately; onOk() is called only if confirmed.
+   ─────────────────────────────────────────────────────────── */
+function showConfirm({ title='Are you sure?', body='', okLabel='Confirm', okClass='btn-danger', icon='fas fa-triangle-exclamation', onOk }){
+  document.getElementById('confirmModalTitleText').textContent = title;
+  document.getElementById('confirmModalBody').innerHTML = body;
+  document.getElementById('confirmModalIcon').className = `${icon}`;
+  document.getElementById('confirmModalIcon').style.color = okClass.includes('danger') ? '#e74c3c' : okClass.includes('warning') ? 'var(--accent)' : '#1a73e8';
+  const okBtn = document.getElementById('confirmModalOk');
+  okBtn.textContent = okLabel;
+  okBtn.className = `btn ${okClass}`;
+  okBtn.style.borderRadius = '8px';
+  okBtn.style.fontSize = '13px';
+  okBtn.style.fontWeight = '600';
+  // Remove any previous listener
+  const fresh = okBtn.cloneNode(true);
+  okBtn.parentNode.replaceChild(fresh, okBtn);
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
+  fresh.addEventListener('click', ()=>{ modal.hide(); if(onOk) onOk(); });
+  modal.show();
+}
 
 /* ═══════════════════════════════════════════════════════════════
    STUDENT DATABASE — loaded live from USERS tab
@@ -2490,5 +2565,6 @@ async function sendReportEmail(){
   setInterval(updateSyncBadge, 15000);
 })();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
