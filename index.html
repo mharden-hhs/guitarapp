@@ -2267,9 +2267,13 @@ async function loadFromDriveDialog(){
       headers:{Authorization:'Bearer '+accessToken}
     });
     const data=await r.json();
-    const tabs=(data.sheets||[]).map(s=>s.properties.title);
+    // Filter out internal system tabs — only show actual assessment tabs to teachers
+    const SYSTEM_TABS = new Set(['USERS','Config','_TEMPLATES','Sheet1','Sheet2','Sheet3']);
+    const tabs=(data.sheets||[])
+      .map(s=>s.properties.title)
+      .filter(t=> !SYSTEM_TABS.has(t) && !t.startsWith('_'));
     setStatus('Connected','ok');
-    if(!tabs.length){toast('Shared sheet has no assessment tabs yet','fas fa-folder-open');return;}
+    if(!tabs.length){toast('No assessment tabs found yet — save an assessment first','fas fa-folder-open');return;}
     showTabPicker(sharedId, tabs);
   }catch(e){setStatus('Error','');toast('Failed to read shared sheet: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');}
 }
