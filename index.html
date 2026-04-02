@@ -1563,31 +1563,29 @@ function loadHistory(key){
     const d=JSON.parse(localStorage.getItem(key)); if(!d)return;
 
     // 1. Restore template into config and persist it
-    if(d.template){
-      restoreTemplateSnapshot(d.template); // updates config.* and calls saveConfig()
-    }
+    if(d.template) restoreTemplateSnapshot(d.template);
 
-    // 2. Re-initialise state with the new sections
-    initState();
+    // 2. Re-render the form with the restored template sections
+    //    Do this BEFORE loading scores so the DOM items exist
+    render();
 
-    // 3. Restore form meta and scores
+    // 3. Restore assessment name
+    const anEl=document.getElementById('assessmentName');
+    if(anEl) anEl.value = d.template?.assessmentName || '';
+
+    // 4. Restore student selection and form meta
     setFormMeta(d);
+
+    // 5. Restore scores into state — getAllItems() now reflects correct template
+    initState();
     if(d.state) getAllItems().forEach(i=>{ if(d.state[i.id]) state[i.id]=d.state[i.id]; });
     if(d.sheetId) currentSheetId=d.sheetId;
 
-    // 4. Restore assessment name
-    if(d.template?.assessmentName){
-      const anEl=document.getElementById('assessmentName');
-      if(anEl) anEl.value=d.template.assessmentName;
-    }
-
-    // 5. Re-render everything with the correct template
-    render();
+    // 6. Re-render assessment rows with restored scores and update summary
     renderAssessment();
     updateSummary();
 
-    // 6. Write into guitar_current so a page refresh also loads this template
-    //    (prevents restoreFromStorage overwriting with old Guitar template)
+    // 7. Write into guitar_current LAST so autoSave() from steps above doesn't overwrite it
     localStorage.setItem('guitar_current', JSON.stringify({
       ...d,
       saved: Date.now(),
