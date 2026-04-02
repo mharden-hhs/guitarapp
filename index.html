@@ -2571,7 +2571,8 @@ async function saveToDrive(){
   if(!accessToken){ openDriveModal(); return; }
   const sharedId = getSharedSheetId();
   if(sharedId){
-    await saveToSharedSheet(false);
+    const ok = await saveToSharedSheet(false);
+    if(!ok) return; // blocked — student missing, no name, not signed in, etc.
     const url = 'https://docs.google.com/spreadsheets/d/'+sharedId;
     setTimeout(()=>{
       showConfirm({
