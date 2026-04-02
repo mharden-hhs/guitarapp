@@ -1209,7 +1209,6 @@ function render(){
   renderStudentBar();
   renderAssessment();
   updateSummary();
-  restoreFromStorage();
   applyBranding();
 }
 
@@ -3303,11 +3302,14 @@ async function pullTemplatesFromSheet(){
 
   initState();
   render();
+  // Restore last session from localStorage — must happen after render() so sections exist
+  restoreFromStorage();
   updateOfflineBadge();
   updateSharedSheetBadge();
 
   const anEl = document.getElementById('assessmentName');
-  if(anEl && config.driveSettings.defaultAssessmentName) anEl.value = config.driveSettings.defaultAssessmentName;
+  if(anEl && !anEl.value && config.driveSettings.defaultAssessmentName)
+    anEl.value = config.driveSettings.defaultAssessmentName;
 
   // Client ID is hardcoded — initialise token client immediately
   loadGoogleAPIs();
