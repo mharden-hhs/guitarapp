@@ -1486,21 +1486,19 @@ function saveToHistory(){
 function restoreFromStorage(){
   try{
     const raw=localStorage.getItem('guitar_current');
-    if(!raw)return;
+    if(!raw) return;
     const data=JSON.parse(raw);
-    // Restore template first so sections/items exist before loading scores
-    if(data.template) restoreTemplateSnapshot(data.template);
+    // config (sections/branding) already loaded via loadConfig() at startup
+    // Just restore student meta, scores, and assessment name
     setFormMeta(data);
-    if(data.state)getAllItems().forEach(i=>{if(data.state[i.id])state[i.id]=data.state[i.id];});
-    if(data.sheetId)currentSheetId=data.sheetId;
-    // Restore assessment name
+    if(data.state) getAllItems().forEach(i=>{ if(data.state[i.id]) state[i.id]=data.state[i.id]; });
+    if(data.sheetId) currentSheetId=data.sheetId;
     if(data.template?.assessmentName){
       const anEl=document.getElementById('assessmentName');
-      if(anEl) anEl.value=data.template.assessmentName;
+      if(anEl && !anEl.value) anEl.value=data.template.assessmentName;
     }
     renderAssessment();
     updateSummary();
-    applyBranding();
   }catch(e){}
 }
 function _doReset(){
@@ -1563,25 +1561,45 @@ function closeHistory(){document.getElementById('histModal').classList.remove('o
 function loadHistory(key){
   try{
     const d=JSON.parse(localStorage.getItem(key)); if(!d)return;
-    // Restore the template first — sections, scores, branding
+
+    // 1. Restore template into config and persist it
     if(d.template){
-      restoreTemplateSnapshot(d.template);
-      render(); // re-render with restored template before loading scores
-      applyBranding();
-      // Restore assessment name from template snapshot
-      if(d.template.assessmentName){
-        const anEl=document.getElementById('assessmentName');
-        if(anEl) anEl.value=d.template.assessmentName;
-      }
+      restoreTemplateSnapshot(d.template); // updates config.* and calls saveConfig()
     }
+
+    // 2. Re-initialise state with the new sections
     initState();
+
+    // 3. Restore form meta and scores
     setFormMeta(d);
     if(d.state) getAllItems().forEach(i=>{ if(d.state[i.id]) state[i.id]=d.state[i.id]; });
     if(d.sheetId) currentSheetId=d.sheetId;
-    renderAssessment(); updateSummary(); closeHistory();
+
+    // 4. Restore assessment name
+    if(d.template?.assessmentName){
+      const anEl=document.getElementById('assessmentName');
+      if(anEl) anEl.value=d.template.assessmentName;
+    }
+
+    // 5. Re-render everything with the correct template
+    render();
+    renderAssessment();
+    updateSummary();
+
+    // 6. Write into guitar_current so a page refresh also loads this template
+    //    (prevents restoreFromStorage overwriting with old Guitar template)
+    localStorage.setItem('guitar_current', JSON.stringify({
+      ...d,
+      saved: Date.now(),
+    }));
+
+    closeHistory();
     const tplName = d.template?.assessmentName ? ` (${d.template.assessmentName})` : '';
     toast(`Assessment loaded${tplName}`,'fas fa-folder-open');
-  }catch(e){ toast('Error loading','fas fa-triangle-exclamation','#e74c3c'); }
+  }catch(e){
+    console.error('loadHistory error', e);
+    toast('Error loading','fas fa-triangle-exclamation','#e74c3c');
+  }
 }
 function deleteHistory(key,btn){
   localStorage.removeItem(key);
