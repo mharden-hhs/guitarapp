@@ -389,6 +389,9 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
   </span>
 </div>
 
+<!-- CUSTOM FIELDS BAR — rendered dynamically from config.customFields -->
+<div id="customFieldsBar" style="display:none;background:#f8f6f2;border-bottom:1px solid #e0e0e0;padding:7px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;"></div>
+
 <!-- MAIN -->
 <div class="main">
   <div class="legend-bar" id="legendBar"></div>
@@ -458,6 +461,17 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
     <div style="margin-top:14px;display:flex;gap:8px;">
       <button class="btn btn-primary" onclick="saveAndApplySections()"><i class="fas fa-check"></i> Save &amp; Apply</button>
       <button class="btn btn-outline-secondary" onclick="resetSectionsToDefault()"><i class="fas fa-rotate-left"></i> Reset to Default</button>
+    </div>
+
+    <hr style="margin:18px 0;"/>
+    <div style="font-size:14px;font-weight:700;color:var(--dk);margin-bottom:4px;">Custom Form Fields</div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px;">Add free-text fields that appear above the scoring rubric — e.g. "Title of Song/Solo", "Composer", "Instrument". Values are saved to the shared sheet and included in email reports.</div>
+    <div id="customFieldsList" style="margin-bottom:10px;"></div>
+    <div style="display:flex;gap:7px;align-items:center;">
+      <input type="text" id="newCustomFieldLabel" placeholder="Field label (e.g. Title of Song/Solo)"
+        style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;"
+        onkeydown="if(event.key==='Enter')addCustomField()"/>
+      <button class="btn btn-sm btn-success" onclick="addCustomField()"><i class="fas fa-plus"></i> Add</button>
     </div>
   </div>
 
@@ -932,6 +946,7 @@ const DEFAULT_CONFIG = {
   classes:['1A','2A','1B','5B'],
   teachers:['Wade','Harden'],
   courses:['Guitar 1','Guitar 2','Piano','Symphonic Band','Vox Chorus','Concert Chorus'],
+  customFields:[],
   metaFields:[
     {id:'studentName',label:'Student',type:'text',placeholder:'Student name...',width:'190px',required:true},
     {id:'classSelect',label:'Class',type:'select',width:'120px',required:true},
@@ -1212,6 +1227,7 @@ function renderAssessment(){
 function render(){
   renderLegend();
   renderStudentBar();
+  renderCustomFieldsBar();
   renderAssessment();
   updateSummary();
   applyBranding();
@@ -1277,6 +1293,7 @@ function getFormMeta(){
     }
   });
   m.comments=document.getElementById('overallComments').value;
+  m.customFields = getCustomFieldValues();
   return m;
 }
 function setFormMeta(m){
@@ -1296,6 +1313,7 @@ function setFormMeta(m){
     }
   });
   if(m.comments!==undefined){const ta=document.getElementById('overallComments');if(ta)ta.value=m.comments;}
+  if(m.customFields) setCustomFieldValues(m.customFields);
 }
 
 /* ═══ LOCAL-FIRST SYNC ENGINE (Option D) ══════════════════════
@@ -1449,8 +1467,9 @@ function restoreTemplateSnapshot(snap){
   if(snap.scores)    config.scores    = snap.scores;
   if(snap.classes)   config.classes   = snap.classes;
   if(snap.teachers)  config.teachers  = snap.teachers;
-  if(snap.courses)   config.courses   = snap.courses;
-  if(snap.branding)  config.branding  = snap.branding;
+  if(snap.courses)      config.courses      = snap.courses;
+  if(snap.customFields) config.customFields = snap.customFields;
+  if(snap.branding)     config.branding     = snap.branding;
   saveConfig();
 }
 
@@ -1788,8 +1807,75 @@ function switchTab(id){
   document.querySelectorAll('.admin-section').forEach(s=>{s.classList.toggle('active',s.id==='tab-'+id);});
 }
 
-/* ── SECTIONS BUILDER ──────────────────────────────────────── */
+/* ── Custom Fields ──────────────────────────────────────────── */
+function renderCustomFieldsBar(){
+  const bar = document.getElementById('customFieldsBar');
+  if(!bar) return;
+  const fields = config.customFields||[];
+  if(!fields.length){ bar.style.display='none'; return; }
+  bar.style.display='flex';
+  bar.innerHTML = fields.map(f=>`
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;font-weight:700;color:#555;white-space:nowrap;margin:0;">
+        <i class="fas fa-pen-line" style="color:#bbb;margin-right:4px;font-size:11px;"></i>${esc(f.label)}
+      </label>
+      <input type="text" id="cf_${f.id}" placeholder="${esc(f.label)}..."
+        style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:3px 9px;outline:none;width:200px;"
+        oninput="autoSave()"/>
+    </div>`).join('');
+}
+
+function renderAdminCustomFields(){
+  const wrap = document.getElementById('customFieldsList');
+  if(!wrap) return;
+  const fields = config.customFields||[];
+  if(!fields.length){
+    wrap.innerHTML='<div style="font-size:12px;color:#aaa;margin-bottom:8px;">No custom fields yet.</div>';
+    return;
+  }
+  wrap.innerHTML = fields.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;background:#f8f8f8;border-radius:7px;padding:7px 10px;">
+      <i class="fas fa-pen-line" style="color:#aaa;font-size:12px;"></i>
+      <span style="flex:1;font-size:13px;font-weight:600;color:var(--dk);">${esc(f.label)}</span>
+      <button class="btn-icon" onclick="removeCustomField(${i})" title="Remove"><i class="fas fa-trash" style="color:#e74c3c;"></i></button>
+    </div>`).join('');
+}
+
+function addCustomField(){
+  const inp = document.getElementById('newCustomFieldLabel');
+  const label = (inp?.value||'').trim();
+  if(!label) return;
+  if(!config.customFields) config.customFields=[];
+  const id = 'cf_'+Date.now();
+  config.customFields.push({id, label});
+  inp.value='';
+  renderAdminCustomFields();
+  toast(`Field "${label}" added`,'fas fa-pen-line','#27ae60');
+}
+
+function removeCustomField(i){
+  config.customFields.splice(i,1);
+  renderAdminCustomFields();
+}
+
+/* ── Custom field values: get/set alongside form meta ──────── */
+function getCustomFieldValues(){
+  const vals={};
+  (config.customFields||[]).forEach(f=>{
+    const el=document.getElementById('cf_'+f.id);
+    vals[f.id]=el?el.value:'';
+  });
+  return vals;
+}
+function setCustomFieldValues(vals){
+  if(!vals) return;
+  (config.customFields||[]).forEach(f=>{
+    const el=document.getElementById('cf_'+f.id);
+    if(el && vals[f.id]!==undefined) el.value=vals[f.id];
+  });
+}
 function populateAdminSections(){
+  renderAdminCustomFields();
   const wrap=document.getElementById('sectionsBuilder');
   wrap.innerHTML=config.sections.map((sec,si)=>`
     <div class="sec-builder" id="sec-b-${si}">
@@ -1865,10 +1951,11 @@ function removeItem(si,subi,ii){
 function saveAndApplySections(){
   saveConfig();
   initState();
+  renderCustomFieldsBar();
   renderAssessment();
   updateSummary();
   closeAdmin();
-  toast('Sections saved & applied','fas fa-check-circle','#27ae60');
+  toast('Sections & fields saved','fas fa-check-circle','#27ae60');
 }
 function resetSectionsToDefault(){
   showConfirm({
@@ -2309,6 +2396,9 @@ function buildSharedRow(){
   const scores  = all.map(i=>(state[i.id]||{}).score||'');
   const numeric = scores.filter(s=>s&&s!=='NA').map(Number);
   const avg     = numeric.length ? (numeric.reduce((a,b)=>a+b,0)/numeric.length).toFixed(2) : '';
+  const customVals = (config.customFields||[]).map(f=>{
+    const el=document.getElementById('cf_'+f.id); return el?el.value:'';
+  });
   return [
     m.studentName   || '',
     (selectedStudent||{}).email || m.studentEmail || '',
@@ -2316,6 +2406,7 @@ function buildSharedRow(){
     String((selectedStudent||{}).grade || ''),
     m.assessDate    || '',
     m.teacherName   || '',
+    ...customVals,
     ...scores,
     avg,
     m.comments      || ''
@@ -2324,8 +2415,10 @@ function buildSharedRow(){
 
 function buildSharedHeader(){
   const all = getAllItems();
+  const customCols = (config.customFields||[]).map(f=>f.label);
   return [
     'Student','Email','Class','Grade','Date','Teacher',
+    ...customCols,
     ...all.map(i=>i.label),
     'Avg Score','Overall Comments'
   ];
@@ -3022,6 +3115,9 @@ function buildReportHTML(personalNote){
         <span class="rpt-meta-pill"><strong>Grade:</strong> ${selectedStudent?selectedStudent.grade:(m.grade||'')}</span>
         <span class="rpt-meta-pill"><strong>Teacher:</strong> ${esc(teacher)}</span>
         <span class="rpt-meta-pill"><strong>Date:</strong> ${dateStr}</span>
+        ${(config.customFields||[]).filter(f=>m.customFields&&m.customFields[f.id]).map(f=>
+          `<span class="rpt-meta-pill"><strong>${esc(f.label)}:</strong> ${esc(m.customFields[f.id])}</span>`
+        ).join('')}
       </td></tr>
     </table>
     ${noteHTML}
@@ -3192,6 +3288,7 @@ function buildTemplateSnapshot(name){
     classes:    JSON.parse(JSON.stringify(config.classes)),
     teachers:   JSON.parse(JSON.stringify(config.teachers||[])),
     courses:    JSON.parse(JSON.stringify(config.courses||[])),
+    customFields: JSON.parse(JSON.stringify(config.customFields||[])),
     branding:   JSON.parse(JSON.stringify(config.branding||DEFAULT_CONFIG.branding)),
     assessmentName: (document.getElementById('assessmentName')||{}).value?.trim()||'',
   };
