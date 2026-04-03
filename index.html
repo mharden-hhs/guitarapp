@@ -445,6 +445,7 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
   <div class="admin-tabs">
     <div class="admin-tab active" onclick="switchTab('sections')"><i class="fas fa-list-check" style="margin-right:5px;"></i>Sections &amp; Items</div>
     <div class="admin-tab" onclick="switchTab('classes')"><i class="fas fa-users" style="margin-right:5px;"></i>Classes &amp; Fields</div>
+    <div class="admin-tab" onclick="switchTab('scales')"><i class="fas fa-sliders" style="margin-right:5px;"></i>Scales</div>
     <div class="admin-tab" onclick="switchTab('templates')"><i class="fas fa-layer-group" style="margin-right:5px;"></i>Templates</div>
     <div class="admin-tab" onclick="switchTab('drive')"><i class="fab fa-google-drive" style="margin-right:5px;"></i>Drive Settings</div>
     <div class="admin-tab" onclick="switchTab('settings')"><i class="fas fa-gear" style="margin-right:5px;"></i>Settings</div>
@@ -576,6 +577,30 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
     <div style="margin-top:14px;">
       <button class="btn btn-primary" onclick="saveDriveSettings()"><i class="fas fa-check"></i> Save Settings</button>
     </div>
+  </div>
+
+  <!-- TAB: SCALES -->
+  <div class="admin-section" id="tab-scales">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--dk);">Scoring Scales / Rubrics</div>
+        <div style="font-size:12px;color:#888;margin-bottom:12px;">Define custom scales for different sections or items. Each scale has labelled options with hidden numeric weights for averaging.</div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:600;color:var(--dk);margin-bottom:6px;">Default Scale</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <select id="defaultScaleSelect" style="font-size:13px;border:1px solid #ccc;border-radius:7px;padding:6px 10px;outline:none;flex:1;" onchange="config.defaultScaleId=this.value;saveConfig();render();toast('Default scale updated','fas fa-sliders','#7b1fa2');">
+      </select>
+      <span style="font-size:12px;color:#888;">Applied to all items unless overridden.</span>
+    </div>
+
+    <hr style="margin:12px 0;"/>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:600;color:var(--dk);">Scale Library</div>
+      <button class="btn btn-sm btn-success" onclick="addNewScale()"><i class="fas fa-plus"></i> New scale</button>
+    </div>
+    <div id="scalesBuilder"></div>
   </div>
 
   <!-- TAB: TEMPLATES -->
@@ -903,6 +928,43 @@ const DEFAULT_CONFIG = {
     schoolName:'Hanover School',
     icon:'fas fa-music',
   },
+  // Scale library — each scale has an id, name, and options array
+  // options: { label, value (numeric weight), short (button label) }
+  scales:[
+    { id:'scale_standard', name:'Standard (4-0)',
+      options:[
+        {label:'Mastery',      value:4, short:'4'},
+        {label:'Proficient',   value:3, short:'3'},
+        {label:'Developing',   value:2, short:'2'},
+        {label:'Not Achieved', value:1, short:'1'},
+        {label:'Not Attempted',value:0, short:'0'},
+        {label:'Not Assessed', value:null, short:'N/A'},
+      ]},
+    { id:'scale_frequency', name:'Frequency',
+      options:[
+        {label:'Always',      value:4, short:'Always'},
+        {label:'Frequently',  value:3, short:'Often'},
+        {label:'Sometimes',   value:2, short:'Sometimes'},
+        {label:'Never',       value:1, short:'Never'},
+        {label:'Not Assessed',value:null, short:'N/A'},
+      ]},
+    { id:'scale_yesno', name:'Yes / No',
+      options:[
+        {label:'Yes',         value:4, short:'Yes'},
+        {label:'Partially',   value:2, short:'Partial'},
+        {label:'No',          value:0, short:'No'},
+        {label:'Not Assessed',value:null, short:'N/A'},
+      ]},
+    { id:'scale_effort', name:'Effort',
+      options:[
+        {label:'Excellent',   value:4, short:'Exc'},
+        {label:'Good',        value:3, short:'Good'},
+        {label:'Fair',        value:2, short:'Fair'},
+        {label:'Poor',        value:1, short:'Poor'},
+        {label:'Not Assessed',value:null, short:'N/A'},
+      ]},
+  ],
+  defaultScaleId:'scale_standard',
   sections:[
     { id:'chords', title:'Chord Shapes', icon:'fas fa-hand-back-fist',
       subsections:[
@@ -938,14 +1000,6 @@ const DEFAULT_CONFIG = {
       ]
     }
   ],
-  scores:[
-    {v:'4',l:'4',label:'Mastery',c:'a4'},
-    {v:'3',l:'3',label:'Proficient',c:'a3'},
-    {v:'2',l:'2',label:'Developing',c:'a2'},
-    {v:'1',l:'1',label:'Not Achieved',c:'a1'},
-    {v:'0',l:'0',label:'Not Attempted',c:'a0'},
-    {v:'NA',l:'N/A',label:'Not Assessed',c:'ana'},
-  ],
   classes:['1A','2A','1B','5B'],
   teachers:['Wade','Harden'],
   courses:['Guitar 1','Guitar 2','Piano','Symphonic Band','Vox Chorus','Concert Chorus'],
@@ -971,8 +1025,52 @@ function loadConfig(){
   try{
     const raw = localStorage.getItem('guitar_config');
     if(raw) config = JSON.parse(raw);
+    migrateConfig();
   }catch(e){}
 }
+
+/* ── Migration: upgrade old configs that used config.scores ── */
+function migrateConfig(){
+  // Ensure scales library exists
+  if(!config.scales || !config.scales.length){
+    config.scales = JSON.parse(JSON.stringify(DEFAULT_CONFIG.scales));
+  }
+  if(!config.defaultScaleId){
+    // If old config.scores existed, convert it to a custom scale
+    if(config.scores && config.scores.length){
+      const custom = {
+        id:'scale_migrated_'+Date.now(),
+        name:'Migrated Scale',
+        options: config.scores.map(s=>({
+          label: s.label,
+          value: s.v==='NA' ? null : parseFloat(s.v),
+          short: s.l,
+        }))
+      };
+      config.scales.unshift(custom);
+      config.defaultScaleId = custom.id;
+    } else {
+      config.defaultScaleId = 'scale_standard';
+    }
+  }
+  // Ensure scales includes all DEFAULT presets (add any missing)
+  DEFAULT_CONFIG.scales.forEach(ds=>{
+    if(!config.scales.find(s=>s.id===ds.id)){
+      config.scales.push(JSON.parse(JSON.stringify(ds)));
+    }
+  });
+}
+
+/* ── Get the effective scale for an item ─────────────────────
+   Priority: item.scaleId > section.scaleId > config.defaultScaleId */
+function getItemScale(item, sec){
+  const sid = item.scaleId || (sec && sec.scaleId) || config.defaultScaleId || 'scale_standard';
+  return config.scales.find(s=>s.id===sid) || config.scales[0] || DEFAULT_CONFIG.scales[0];
+}
+
+/* ── Get score button colour class based on option index ─────── */
+const SCORE_COLORS = ['a4','a3','a2','a1','a0','ana'];
+function getScoreClass(optIndex){ return SCORE_COLORS[optIndex] || 'a0'; }
 function saveConfig(){
   localStorage.setItem('guitar_config', JSON.stringify(config));
 }
@@ -1006,8 +1104,9 @@ function initState(){
 /* ═══ FORM RENDER ══════════════════════════════════════════════ */
 function renderLegend(){
   const bar = document.getElementById('legendBar');
+  const scale = getItemScale({});
   bar.innerHTML = '<span style="font-size:11px;color:#888;margin-right:4px;">Score:</span>' +
-    config.scores.map(sc=>`<span class="lpill lp${sc.v}">${sc.l} — ${sc.label}</span>`).join('');
+    scale.options.map((opt,i)=>`<span class="lpill lp${getScoreClass(i)}">${opt.short} — ${opt.label}</span>`).join('');
 }
 
 function renderStudentBar(){
@@ -1196,18 +1295,20 @@ function subColor(color){
   return '';
 }
 
-function makeRow(item){
+function makeRow(item, sec){
   if(!state[item.id]) state[item.id]={score:null,comment:'',chordName:''};
   const s=state[item.id];
+  const scale = getItemScale(item, sec);
   const lbl=item.editable
     ? `${esc(item.label)} <input class="chord-inp" type="text" placeholder="name" value="${esc(s.chordName)}" onchange="setChordName('${item.id}',this.value)"/>`
     : esc(item.label);
-  const btns=config.scores.map(sc=>
-    `<button class="sb ${s.score===sc.v?sc.c:''}" onclick="setScore('${item.id}','${sc.v}',this)" title="${sc.label}">${sc.l}</button>`
-  ).join('');
+  const btns=scale.options.map((opt,i)=>{
+    const isSelected = s.score === String(opt.value);
+    return `<button class="sb ${isSelected?getScoreClass(i):''}" onclick="setScore('${item.id}','${opt.value}',this,'${scale.id}')" title="${opt.label}">${esc(opt.short)}</button>`;
+  }).join('');
   return `<div class="a-row">
     <div class="row-lbl">${lbl}</div>
-    <div class="score-btns" id="btns-${item.id}">${btns}</div>
+    <div class="score-btns" id="btns-${item.id}" data-scale="${scale.id}">${btns}</div>
     <div class="row-cmt"><input type="text" placeholder="Comment..." value="${esc(s.comment)}" onchange="setComment('${item.id}',this.value)"/></div>
   </div>`;
 }
@@ -1218,10 +1319,13 @@ function renderAssessment(){
     const subsHTML=sec.subsections.map(sub=>{
       const style=subColor(sub.color);
       const subHead=style?`<div class="sec-sub" style="${style}">${esc(sub.label)}</div>`:`<div class="sec-sub">${esc(sub.label)}</div>`;
-      return subHead+sub.items.map(makeRow).join('');
+      return subHead+sub.items.map(item=>makeRow(item,sec)).join('');
     }).join('');
+    // Show the section's scale name if it differs from global default
+    const secScale = sec.scaleId ? config.scales.find(s=>s.id===sec.scaleId) : null;
+    const scaleBadge = secScale ? `<span style="font-size:10px;background:rgba(255,255,255,.12);color:#ddd;border-radius:10px;padding:1px 8px;margin-left:8px;">${esc(secScale.name)}</span>` : '';
     return `<div class="sec-card">
-      <div class="sec-head"><i class="${sec.icon||'fas fa-music'}"></i><span>${esc(sec.title)}</span></div>
+      <div class="sec-head"><i class="${sec.icon||'fas fa-music'}"></i><span>${esc(sec.title)}</span>${scaleBadge}</div>
       ${subsHTML}
     </div>`;
   }).join('');
@@ -1237,13 +1341,20 @@ function render(){
 }
 
 /* ═══ STATE MUTATIONS ══════════════════════════════════════════ */
-function setScore(id,val,btn){
+function setScore(id, val, btn, scaleId){
   if(!state[id]) state[id]={score:null,comment:'',chordName:''};
-  state[id].score=state[id].score===val?null:val;
-  const c=document.getElementById('btns-'+id);
-  if(c) c.querySelectorAll('.sb').forEach((b,i)=>{
-    b.className='sb '+(state[id].score===config.scores[i].v?config.scores[i].c:'');
-  });
+  // Toggle off if clicking the same score
+  state[id].score = state[id].score===String(val) ? null : String(val);
+  // Re-render just the button group with correct highlighting
+  const c = document.getElementById('btns-'+id);
+  if(c){
+    const sid = scaleId || c.getAttribute('data-scale') || config.defaultScaleId;
+    const scale = config.scales.find(s=>s.id===sid) || getItemScale({});
+    c.querySelectorAll('.sb').forEach((b,i)=>{
+      const opt = scale.options[i];
+      b.className = 'sb ' + (opt && state[id].score===String(opt.value) ? getScoreClass(i) : '');
+    });
+  }
   updateSummary(); autoSave(); checkAutoComplete();
 }
 function setComment(id,val){if(!state[id])state[id]={score:null,comment:'',chordName:''};state[id].comment=val;autoSave();}
@@ -1251,28 +1362,48 @@ function setChordName(id,val){if(!state[id])state[id]={score:null,comment:'',cho
 
 /* ═══ SUMMARY ══════════════════════════════════════════════════ */
 function updateSummary(){
-  const all=getAllItems();
-  const scored=all.map(i=>(state[i.id]||{}).score).filter(s=>s&&s!=='NA');
-  const cnt={};config.scores.forEach(s=>{if(s.v!=='NA')cnt[s.v]=0;});
-  scored.forEach(s=>{if(cnt[s]!==undefined)cnt[s]++;});
-  const tot=scored.length;
-  const assessed=all.filter(i=>(state[i.id]||{}).score!==null).length;
-  const avg=tot?(scored.reduce((a,b)=>a+parseFloat(b),0)/tot).toFixed(2):'—';
-  const prof=config.scores.filter(s=>parseFloat(s.v)>=3).map(s=>s.v);
-  const pct=tot?Math.round((scored.filter(s=>prof.includes(s)).length/tot)*100):0;
+  const all = getAllItems();
+  // Collect all numeric score values (null-value options like N/A excluded from avg)
+  const numericScores = all
+    .map(i => parseFloat((state[i.id]||{}).score))
+    .filter(v => !isNaN(v)); // null scores and N/A (stored as 'null') excluded
+  const assessed = all.filter(i=>(state[i.id]||{}).score!==null).length;
+  const avg = numericScores.length ? (numericScores.reduce((a,b)=>a+b,0)/numericScores.length).toFixed(2) : '—';
+  // Proficient = top half of the max scale value across all scales
+  const allScaleMaxes = all.map(i=>{
+    const sc = getItemScale(i, config.sections.find(s=>s.subsections.some(ss=>ss.items.includes(i))));
+    return Math.max(...sc.options.filter(o=>o.value!==null).map(o=>o.value));
+  });
+  const globalMax = allScaleMaxes.length ? Math.max(...allScaleMaxes) : 4;
+  const profThreshold = globalMax * 0.75; // 75% of max = proficient
+  const profCount = numericScores.filter(v=>v>=profThreshold).length;
+  const pct = numericScores.length ? Math.round((profCount/numericScores.length)*100) : 0;
+
+  // Count by rounded value for top 3 most common scores
+  const valueCounts = {};
+  numericScores.forEach(v=>{ const k=Math.round(v); valueCounts[k]=(valueCounts[k]||0)+1; });
+
   document.getElementById('statGrid').innerHTML=`
     <div class="stat-box"><div class="stat-num" style="color:var(--accent)">${assessed}/${all.length}</div><div class="stat-lbl">Assessed</div></div>
     <div class="stat-box"><div class="stat-num" style="color:#1a73e8">${avg}</div><div class="stat-lbl">Avg Score</div></div>
     <div class="stat-box"><div class="stat-num" style="color:#27ae60">${pct}%</div><div class="stat-lbl">Proficient+</div></div>
-    ${config.scores.filter(s=>s.v!=='NA').slice(0,3).map(s=>`<div class="stat-box"><div class="stat-num" style="color:var(--s${s.v})">${cnt[s.v]||0}</div><div class="stat-lbl">${s.label}</div></div>`).join('')}
   `;
   const colors=['#27ae60','#2980b9','#f39c12','#e74c3c','#95a5a6'];
-  const numScores=config.scores.filter(s=>s.v!=='NA');
-  document.getElementById('progBar').innerHTML=tot
-    ?numScores.map((s,i)=>`<div class="pseg" style="width:${Math.round(((cnt[s.v]||0)/tot)*100)}%;background:${colors[i]||'#ccc'};"></div>`).join('')
-    :'<div class="pseg" style="width:100%;background:#eee;"></div>';
-  document.getElementById('progLegend').innerHTML=tot
-    ?numScores.map((s,i)=>`<span style="font-size:11px;color:${colors[i]||'#ccc'};"><strong>${cnt[s.v]||0}</strong> × ${s.v}</span>`).join(''):'';
+  // Progress bar: proportion of each numeric score bucket
+  const defaultScale = getItemScale({});
+  const numOpts = defaultScale.options.filter(o=>o.value!==null);
+  const tot = numericScores.length;
+  document.getElementById('progBar').innerHTML = tot
+    ? numOpts.map((opt,i)=>{
+        const cnt = numericScores.filter(v=>Math.round(v)===Math.round(opt.value)).length;
+        return `<div class="pseg" style="width:${Math.round((cnt/tot)*100)}%;background:${colors[i]||'#ccc'};"></div>`;
+      }).join('')
+    : '<div class="pseg" style="width:100%;background:#eee;"></div>';
+  document.getElementById('progLegend').innerHTML = tot
+    ? numOpts.map((opt,i)=>{
+        const cnt = numericScores.filter(v=>Math.round(v)===Math.round(opt.value)).length;
+        return `<span style="font-size:11px;color:${colors[i]||'#ccc'};"><strong>${cnt}</strong> × ${esc(opt.short)}</span>`;
+      }).join('') : '';
 }
 
 /* ═══ FORM META ════════════════════════════════════════════════ */
@@ -1453,26 +1584,31 @@ window.addEventListener('beforeunload', e => {
 /* Build a lightweight snapshot of the current template for storage */
 function captureTemplateSnapshot(){
   return {
-    sections: JSON.parse(JSON.stringify(config.sections)),
-    scores:   JSON.parse(JSON.stringify(config.scores)),
-    classes:  JSON.parse(JSON.stringify(config.classes)),
-    teachers: JSON.parse(JSON.stringify(config.teachers||[])),
-    courses:  JSON.parse(JSON.stringify(config.courses||[])),
-    branding: JSON.parse(JSON.stringify(config.branding||DEFAULT_CONFIG.branding)),
-    assessmentName: (document.getElementById('assessmentName')||{}).value?.trim()||'',
+    sections:      JSON.parse(JSON.stringify(config.sections)),
+    scores:        JSON.parse(JSON.stringify(config.scores||[])), // kept for compat
+    scales:        JSON.parse(JSON.stringify(config.scales||DEFAULT_CONFIG.scales)),
+    defaultScaleId:config.defaultScaleId||'scale_standard',
+    classes:       JSON.parse(JSON.stringify(config.classes)),
+    teachers:      JSON.parse(JSON.stringify(config.teachers||[])),
+    courses:       JSON.parse(JSON.stringify(config.courses||[])),
+    customFields:  JSON.parse(JSON.stringify(config.customFields||[])),
+    branding:      JSON.parse(JSON.stringify(config.branding||DEFAULT_CONFIG.branding)),
+    assessmentName:(document.getElementById('assessmentName')||{}).value?.trim()||'',
   };
 }
 
 /* Restore a template snapshot into config and re-render */
 function restoreTemplateSnapshot(snap){
   if(!snap) return;
-  if(snap.sections)  config.sections  = snap.sections;
-  if(snap.scores)    config.scores    = snap.scores;
-  if(snap.classes)   config.classes   = snap.classes;
-  if(snap.teachers)  config.teachers  = snap.teachers;
-  if(snap.courses)      config.courses      = snap.courses;
-  if(snap.customFields) config.customFields = snap.customFields;
-  if(snap.branding)     config.branding     = snap.branding;
+  if(snap.sections)       config.sections       = snap.sections;
+  if(snap.scales)         config.scales         = snap.scales;
+  if(snap.defaultScaleId) config.defaultScaleId = snap.defaultScaleId;
+  if(snap.classes)        config.classes        = snap.classes;
+  if(snap.teachers)       config.teachers       = snap.teachers;
+  if(snap.courses)        config.courses        = snap.courses;
+  if(snap.customFields)   config.customFields   = snap.customFields;
+  if(snap.branding)       config.branding       = snap.branding;
+  migrateConfig(); // ensure scales always valid
   saveConfig();
 }
 
@@ -1780,6 +1916,7 @@ function openAdmin(){
   populateDriveSettings();
   renderAdminTemplateList();
   populateBranding();
+  populateAdminScales();
   document.getElementById('adminOverlay').classList.add('open');
 }
 function populateBranding(){
@@ -1806,8 +1943,9 @@ function saveBranding(){
 }
 function closeAdmin(){document.getElementById('adminOverlay').classList.remove('open');}
 function switchTab(id){
-  document.querySelectorAll('.admin-tab').forEach((t,i)=>{t.classList.toggle('active',['sections','classes','templates','drive','settings'][i]===id);});
+  document.querySelectorAll('.admin-tab').forEach((t,i)=>{t.classList.toggle('active',['sections','classes','scales','templates','drive','settings'][i]===id);});
   document.querySelectorAll('.admin-section').forEach(s=>{s.classList.toggle('active',s.id==='tab-'+id);});
+  if(id==='scales') populateAdminScales();
 }
 
 /* ── Custom Fields ──────────────────────────────────────────── */
@@ -1879,14 +2017,133 @@ function setCustomFieldValues(vals){
     if(el && vals[f.id]!==undefined) el.value=vals[f.id];
   });
 }
+/* ── SCALES BUILDER ────────────────────────────────────────── */
+function populateAdminScales(){
+  // Populate default scale selector
+  const sel = document.getElementById('defaultScaleSelect');
+  if(sel){
+    sel.innerHTML = config.scales.map(s=>`<option value="${s.id}" ${s.id===config.defaultScaleId?'selected':''}>${esc(s.name)}</option>`).join('');
+  }
+  // Render scale library
+  const wrap = document.getElementById('scalesBuilder');
+  if(!wrap) return;
+  const BUILT_IN = ['scale_standard','scale_frequency','scale_yesno','scale_effort'];
+  wrap.innerHTML = config.scales.map((scale,si)=>{
+    const isBuiltIn = BUILT_IN.includes(scale.id);
+    return `
+    <div class="sec-builder" style="margin-bottom:12px;">
+      <div class="sec-builder-head">
+        <i class="fas fa-sliders" style="color:var(--accent);font-size:13px;"></i>
+        <input type="text" value="${esc(scale.name)}" placeholder="Scale name..."
+          ${isBuiltIn?'disabled style="color:#888;"':''}
+          onchange="config.scales[${si}].name=this.value"/>
+        ${isBuiltIn
+          ? '<span style="font-size:10px;color:#aaa;padding:2px 8px;background:#f0f0f0;border-radius:8px;">Built-in</span>'
+          : `<button class="btn-icon" style="color:#e74c3c;border-color:#e74c3c;" onclick="deleteScale('${scale.id}')" title="Delete scale"><i class="fas fa-trash"></i></button>`
+        }
+      </div>
+      <div style="padding:8px 12px;background:#fafafa;border-radius:0 0 8px 8px;border:1px solid #e8e8e8;border-top:none;">
+        <div style="display:grid;grid-template-columns:1fr 80px 60px 28px;gap:5px;font-size:11px;font-weight:600;color:#aaa;margin-bottom:4px;padding:0 2px;">
+          <span>Label</span><span>Short</span><span>Weight</span><span></span>
+        </div>
+        ${scale.options.map((opt,oi)=>`
+          <div style="display:grid;grid-template-columns:1fr 80px 60px 28px;gap:5px;margin-bottom:4px;align-items:center;">
+            <input type="text" value="${esc(opt.label)}" placeholder="Label..."
+              style="font-size:12px;border:1px solid #ddd;border-radius:5px;padding:3px 7px;outline:none;"
+              ${isBuiltIn?'disabled':''}
+              onchange="config.scales[${si}].options[${oi}].label=this.value"/>
+            <input type="text" value="${esc(opt.short)}" placeholder="Short..."
+              style="font-size:12px;border:1px solid #ddd;border-radius:5px;padding:3px 7px;outline:none;"
+              ${isBuiltIn?'disabled':''}
+              onchange="config.scales[${si}].options[${oi}].short=this.value"/>
+            <input type="number" value="${opt.value===null?'':opt.value}" placeholder="N/A"
+              style="font-size:12px;border:1px solid #ddd;border-radius:5px;padding:3px 7px;outline:none;"
+              ${isBuiltIn?'disabled':''}
+              title="Numeric weight for averaging. Leave blank for N/A."
+              onchange="config.scales[${si}].options[${oi}].value=this.value===''?null:parseFloat(this.value)"/>
+            ${isBuiltIn?'<span></span>':`<button class="btn-icon" onclick="removeScaleOption('${scale.id}',${oi})" title="Remove"><i class="fas fa-xmark" style="font-size:11px;"></i></button>`}
+          </div>`).join('')}
+        ${!isBuiltIn?`
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button class="btn btn-sm btn-outline-secondary" onclick="addScaleOption('${scale.id}')">
+            <i class="fas fa-plus"></i> Add option
+          </button>
+          <button class="btn btn-sm btn-primary" onclick="saveAndApplyScales()">
+            <i class="fas fa-check"></i> Save &amp; Apply
+          </button>
+        </div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addNewScale(){
+  const id = 'scale_custom_'+Date.now();
+  config.scales.push({
+    id, name:'Custom Scale',
+    options:[
+      {label:'Always',     value:4, short:'Always'},
+      {label:'Frequently', value:3, short:'Often'},
+      {label:'Sometimes',  value:2, short:'Sometimes'},
+      {label:'Never',      value:1, short:'Never'},
+      {label:'N/A',        value:null, short:'N/A'},
+    ]
+  });
+  saveConfig(); populateAdminScales();
+  toast('New custom scale added — edit the options below','fas fa-sliders','#7b1fa2');
+}
+function deleteScale(id){
+  const scale = config.scales.find(s=>s.id===id);
+  if(!scale) return;
+  showConfirm({
+    title:`Delete "${scale.name}"`,
+    body:'Sections and items using this scale will revert to the default scale.',
+    okLabel:'Delete', okClass:'btn-danger', icon:'fas fa-trash',
+    onOk(){
+      config.scales = config.scales.filter(s=>s.id!==id);
+      config.sections.forEach(sec=>{
+        if(sec.scaleId===id) delete sec.scaleId;
+        sec.subsections.forEach(sub=>sub.items.forEach(item=>{ if(item.scaleId===id) delete item.scaleId; }));
+      });
+      if(config.defaultScaleId===id) config.defaultScaleId='scale_standard';
+      saveConfig(); populateAdminScales();
+      toast(`Scale deleted`,'fas fa-trash','#e74c3c');
+    }
+  });
+}
+function addScaleOption(scaleId){
+  const scale = config.scales.find(s=>s.id===scaleId);
+  if(!scale) return;
+  scale.options.push({label:'New Option',value:1,short:'New'});
+  saveConfig(); populateAdminScales();
+}
+function removeScaleOption(scaleId,oi){
+  const scale = config.scales.find(s=>s.id===scaleId);
+  if(!scale||scale.options.length<=1) return;
+  scale.options.splice(oi,1);
+  saveConfig(); populateAdminScales();
+}
+function saveAndApplyScales(){
+  saveConfig(); render();
+  toast('Scales saved & applied','fas fa-check-circle','#27ae60');
+}
+
+/* ── SECTIONS BUILDER ──────────────────────────────────────── */
 function populateAdminSections(){
   renderAdminCustomFields();
   const wrap=document.getElementById('sectionsBuilder');
-  wrap.innerHTML=config.sections.map((sec,si)=>`
+  wrap.innerHTML=config.sections.map((sec,si)=>{
+    const scaleOpts = config.scales.map(s=>`<option value="${s.id}" ${(sec.scaleId||'')=== s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+    return `
     <div class="sec-builder" id="sec-b-${si}">
       <div class="sec-builder-head">
         <i class="${sec.icon||'fas fa-music'}" style="color:var(--accent);font-size:14px;"></i>
         <input type="text" value="${esc(sec.title)}" onchange="config.sections[${si}].title=this.value" placeholder="Section title..."/>
+        <select title="Section scale" style="font-size:11px;border:1px solid #ddd;border-radius:5px;padding:2px 6px;outline:none;color:#555;"
+          onchange="config.sections[${si}].scaleId=this.value||undefined">
+          <option value="">Default scale</option>
+          ${scaleOpts}
+        </select>
         <button class="btn-icon" style="color:#e74c3c;border-color:#e74c3c;" onclick="removeSection(${si})" title="Delete section"><i class="fas fa-trash"></i></button>
       </div>
       <div class="sec-builder-body">
@@ -1900,16 +2157,24 @@ function populateAdminSections(){
             <button class="btn-icon" onclick="removeSubsection(${si},${subi})" title="Delete sub-section"><i class="fas fa-trash"></i></button>
           </div>
           <div style="padding:0 0 6px 10px;">
-            ${sub.items.map((item,ii)=>`
+            ${sub.items.map((item,ii)=>{
+              const itemScaleOpts = config.scales.map(s=>`<option value="${s.id}" ${(item.scaleId||'')=== s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+              return `
               <div class="item-row" draggable="true" data-sec="${si}" data-sub="${subi}" data-item="${ii}">
                 <i class="fas fa-grip-vertical drag-handle"></i>
                 <input class="item-name" type="text" value="${esc(item.label)}" onchange="config.sections[${si}].subsections[${subi}].items[${ii}].label=this.value"/>
+                <select title="Item scale override" style="font-size:10px;border:1px solid #e0e0e0;border-radius:5px;padding:1px 4px;outline:none;color:#777;max-width:90px;"
+                  onchange="config.sections[${si}].subsections[${subi}].items[${ii}].scaleId=this.value||undefined">
+                  <option value="">Section default</option>
+                  ${itemScaleOpts}
+                </select>
                 <div class="cb-wrap">
                   <input type="checkbox" id="ed_${si}_${subi}_${ii}" ${item.editable?'checked':''} onchange="config.sections[${si}].subsections[${subi}].items[${ii}].editable=this.checked"/>
                   <label for="ed_${si}_${subi}_${ii}">Editable</label>
                 </div>
                 <button class="btn-icon" onclick="removeItem(${si},${subi},${ii})"><i class="fas fa-trash"></i></button>
-              </div>`).join('')}
+              </div>`;
+            }).join('')}
             <div class="add-item-row">
               <input type="text" placeholder="+ Add item..." id="newItem_${si}_${subi}" onkeydown="if(event.key==='Enter')addItem(${si},${subi})"/>
               <button class="btn-icon add" onclick="addItem(${si},${subi})"><i class="fas fa-plus"></i></button>
@@ -1918,7 +2183,8 @@ function populateAdminSections(){
         `).join('')}
         <button class="btn btn-sm btn-outline-secondary mt-1" onclick="addSubsection(${si})"><i class="fas fa-plus"></i> Add sub-section</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   setupDragDrop();
 }
 
@@ -2396,11 +2662,23 @@ function getSharedSheetId(){
 
 /* ── Build the flat row for the shared sheet ─────────────────── */
 function buildSharedRow(){
-  const m  = getFormMeta();
+  const m   = getFormMeta();
   const all = getAllItems();
-  const scores  = all.map(i=>(state[i.id]||{}).score||'');
-  const numeric = scores.filter(s=>s&&s!=='NA').map(Number);
-  const avg     = numeric.length ? (numeric.reduce((a,b)=>a+b,0)/numeric.length).toFixed(2) : '';
+  // For each item, store the option label (e.g. "Proficient") alongside numeric value
+  const scoreLabels = all.map(i=>{
+    const scoreVal = (state[i.id]||{}).score;
+    if(scoreVal===null||scoreVal===undefined) return '';
+    // Find the option label for this value in the item's effective scale
+    const sec = config.sections.find(s=>s.subsections.some(ss=>ss.items.some(it=>it.id===i.id)));
+    const scale = getItemScale(i, sec);
+    const opt = scale.options.find(o=>String(o.value)===String(scoreVal));
+    return opt ? `${opt.short} (${opt.value!==null?opt.value:'N/A'})` : scoreVal;
+  });
+  // Numeric-only values for avg (null = N/A, excluded)
+  const numeric = all
+    .map(i=>{ const v=(state[i.id]||{}).score; return v!==null&&v!==undefined?parseFloat(v):NaN; })
+    .filter(v=>!isNaN(v));
+  const avg = numeric.length ? (numeric.reduce((a,b)=>a+b,0)/numeric.length).toFixed(2) : '';
   const customVals = (config.customFields||[]).map(f=>{
     const el=document.getElementById('cf_'+f.id); return el?el.value:'';
   });
@@ -2412,7 +2690,7 @@ function buildSharedRow(){
     m.assessDate    || '',
     m.teacherName   || '',
     ...customVals,
-    ...scores,
+    ...scoreLabels,
     avg,
     m.comments      || ''
   ];
@@ -3054,15 +3332,16 @@ function clearSelectedStudent(){
 }
 
 /* ═══ REPORT HTML BUILDER ═══════════════════════════════════════ */
-const SCORE_COLORS = {'4':'#27ae60','3':'#2980b9','2':'#f39c12','1':'#e74c3c','0':'#95a5a6','NA':'#bdc3c7'};
-const SCORE_LABELS = {'4':'Mastery','3':'Proficient','2':'Developing','1':'Not Achieved','0':'Not Attempted','NA':'Not Assessed'};
-
 function buildReportHTML(personalNote){
   const m = getFormMeta();
   const all = getAllItems();
-  const scored = all.map(i=>(state[i.id]||{}).score).filter(s=>s&&s!=='NA');
-  const avg = scored.length ? (scored.reduce((a,b)=>a+parseFloat(b),0)/scored.length).toFixed(2) : '—';
-  const prof = scored.length ? Math.round((scored.filter(s=>s==='3'||s==='4').length/scored.length)*100) : 0;
+  const numericScores = all
+    .map(i=>{ const v=(state[i.id]||{}).score; return v!==null&&v!==undefined?parseFloat(v):NaN; })
+    .filter(v=>!isNaN(v));
+  const avg = numericScores.length ? (numericScores.reduce((a,b)=>a+b,0)/numericScores.length).toFixed(2) : '—';
+  const globalMax = Math.max(4, ...config.scales.flatMap(s=>s.options.filter(o=>o.value!==null).map(o=>o.value)));
+  const profThreshold = globalMax * 0.75;
+  const prof = numericScores.length ? Math.round((numericScores.filter(v=>v>=profThreshold).length/numericScores.length)*100) : 0;
   const assessed = all.filter(i=>(state[i.id]||{}).score!==null).length;
   const nm = config.metaFields.find(f=>f.id==='studentName');
   const studentDisplayName = selectedStudent
@@ -3081,10 +3360,17 @@ function buildReportHTML(personalNote){
       sub.items.forEach(item=>{
         const s = state[item.id]||{};
         const lbl = item.editable&&s.chordName ? `${item.label} (${s.chordName})` : item.label;
-        const scoreVal = s.score||null;
-        const pillStyle = scoreVal ? `background:${SCORE_COLORS[scoreVal]||'#ccc'};` : '';
-        const pillClass = scoreVal ? 'rpt-score-pill' : 'rpt-score-pill rpt-score-ns';
-        const pillText = scoreVal ? (scoreVal+' — '+(SCORE_LABELS[scoreVal]||scoreVal)) : 'Not assessed';
+        const scoreVal = s.score!==null&&s.score!==undefined ? s.score : null;
+        // Look up option from item's effective scale
+        const itemSec = config.sections.find(sec=>sec.subsections.some(ss=>ss.items.some(it=>it.id===item.id)));
+        const scale = getItemScale(item, itemSec);
+        const opt = scoreVal!==null ? scale.options.find(o=>String(o.value)===String(scoreVal)) : null;
+        const PILL_COLORS = ['#27ae60','#2980b9','#f39c12','#e74c3c','#95a5a6','#bdc3c7'];
+        const optIdx = opt ? scale.options.indexOf(opt) : -1;
+        const pillColor = optIdx>=0 ? (PILL_COLORS[optIdx]||'#ccc') : '#eee';
+        const pillStyle = opt ? `background:${pillColor};` : '';
+        const pillClass = opt ? 'rpt-score-pill' : 'rpt-score-pill rpt-score-ns';
+        const pillText = opt ? `${opt.short} — ${opt.label}` : 'Not assessed';
         sectionsHTML += `<div class="rpt-row">
           <div class="rpt-row-label">${esc(lbl)}</div>
           <span class="${pillClass}" style="${pillStyle}">${pillText}</span>
@@ -3291,30 +3577,33 @@ function buildTemplateSnapshot(name){
     id: 'tpl_' + Date.now(),
     name: name.trim(),
     savedAt: Date.now(),
-    sections:   JSON.parse(JSON.stringify(config.sections)),
-    scores:     JSON.parse(JSON.stringify(config.scores)),
-    classes:    JSON.parse(JSON.stringify(config.classes)),
-    teachers:   JSON.parse(JSON.stringify(config.teachers||[])),
-    courses:    JSON.parse(JSON.stringify(config.courses||[])),
-    customFields: JSON.parse(JSON.stringify(config.customFields||[])),
-    branding:   JSON.parse(JSON.stringify(config.branding||DEFAULT_CONFIG.branding)),
-    assessmentName: (document.getElementById('assessmentName')||{}).value?.trim()||'',
+    sections:      JSON.parse(JSON.stringify(config.sections)),
+    scales:        JSON.parse(JSON.stringify(config.scales||DEFAULT_CONFIG.scales)),
+    defaultScaleId:config.defaultScaleId||'scale_standard',
+    classes:       JSON.parse(JSON.stringify(config.classes)),
+    teachers:      JSON.parse(JSON.stringify(config.teachers||[])),
+    courses:       JSON.parse(JSON.stringify(config.courses||[])),
+    customFields:  JSON.parse(JSON.stringify(config.customFields||[])),
+    branding:      JSON.parse(JSON.stringify(config.branding||DEFAULT_CONFIG.branding)),
+    assessmentName:(document.getElementById('assessmentName')||{}).value?.trim()||'',
   };
 }
 
 /* ── Apply a template snapshot to the current config ─────────── */
 function applyTemplate(tpl, silent=false){
-  config.sections     = JSON.parse(JSON.stringify(tpl.sections));
-  config.scores       = JSON.parse(JSON.stringify(tpl.scores));
-  config.classes      = JSON.parse(JSON.stringify(tpl.classes));
-  config.teachers     = JSON.parse(JSON.stringify(tpl.teachers||[]));
-  config.courses      = JSON.parse(JSON.stringify(tpl.courses||config.courses||[]));
-  config.customFields = JSON.parse(JSON.stringify(tpl.customFields||[]));
-  if(tpl.branding)    config.branding = JSON.parse(JSON.stringify(tpl.branding));
+  config.sections      = JSON.parse(JSON.stringify(tpl.sections));
+  config.scales        = JSON.parse(JSON.stringify(tpl.scales||DEFAULT_CONFIG.scales));
+  config.defaultScaleId= tpl.defaultScaleId||'scale_standard';
+  config.classes       = JSON.parse(JSON.stringify(tpl.classes));
+  config.teachers      = JSON.parse(JSON.stringify(tpl.teachers||[]));
+  config.courses       = JSON.parse(JSON.stringify(tpl.courses||config.courses||[]));
+  config.customFields  = JSON.parse(JSON.stringify(tpl.customFields||[]));
+  if(tpl.branding)     config.branding = JSON.parse(JSON.stringify(tpl.branding));
+  migrateConfig();
   saveConfig();
   initState();
-  render(); // render() calls renderCustomFieldsBar() internally
-  renderCustomFieldsBar(); // explicit call in case render() runs before config is fully set
+  render();
+  renderCustomFieldsBar();
   applyBranding();
   const anEl = document.getElementById('assessmentName');
   if(anEl && tpl.assessmentName) anEl.value = tpl.assessmentName;
