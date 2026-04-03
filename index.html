@@ -3339,6 +3339,7 @@ function saveCurrentAsTemplate(){
         if(inp) inp.value='';
         renderAdminTemplateList();
         toast(`Template "${name}" updated`,'fas fa-floppy-disk','#27ae60');
+        if(accessToken && getSharedSheetId()) syncTemplatesToSheet(true);
       }
     });
     return;
@@ -3348,6 +3349,7 @@ function saveCurrentAsTemplate(){
   if(inp) inp.value='';
   renderAdminTemplateList();
   toast(`Template "${name}" saved`,'fas fa-floppy-disk','#27ae60');
+  if(accessToken && getSharedSheetId()) syncTemplatesToSheet(true);
 }
 
 /* ── Render template list in Admin panel ─────────────────────── */
@@ -3481,11 +3483,11 @@ function startBlank(){
 }
 
 /* ── Google Sheet sync ────────────────────────────────────────── */
-async function syncTemplatesToSheet(){
-  if(!accessToken){ toast('Sign in first','fas fa-triangle-exclamation','#e74c3c'); return; }
+async function syncTemplatesToSheet(silent=false){
+  if(!accessToken){ if(!silent) toast('Sign in first','fas fa-triangle-exclamation','#e74c3c'); return; }
   const sharedId = getSharedSheetId();
-  if(!sharedId){ toast('No shared sheet configured','fas fa-triangle-exclamation','#f39c12'); return; }
-  setStatus('Syncing templates...','busy');
+  if(!sharedId){ if(!silent) toast('No shared sheet configured','fas fa-triangle-exclamation','#f39c12'); return; }
+  if(!silent) setStatus('Syncing templates...','busy');
   try{
     const tpls = getTemplates();
     const rows = [['guitar_templates_v1'], [JSON.stringify(tpls)]];
@@ -3495,9 +3497,12 @@ async function syncTemplatesToSheet(){
       headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
       body:JSON.stringify({range:`${TPL_SHEET_TAB}!A1`,majorDimension:'ROWS',values:rows})
     });
-    setStatus('Synced','ok');
-    toast(`${tpls.length} template${tpls.length!==1?'s':''} pushed to Sheet`,'fas fa-upload','#27ae60');
-  }catch(e){ setStatus('Error',''); toast('Sync failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c'); }
+    if(!silent) setStatus('Synced','ok');
+    if(!silent) toast(`${tpls.length} template${tpls.length!==1?'s':''} pushed to Sheet`,'fas fa-upload','#27ae60');
+  }catch(e){
+    if(!silent){ setStatus('Error',''); toast('Sync failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c'); }
+    console.warn('syncTemplatesToSheet:', e.message);
+  }
 }
 
 async function pullTemplatesFromSheet(){
