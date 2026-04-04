@@ -3278,6 +3278,7 @@ let signedInEmail = '';
 /* ═══ REPORT MODAL ══════════════════════════════════════════════ */
 function openReportModal(){
   document.getElementById('reportModal').classList.add('open');
+  prepSendTab(); // always pre-fill email + subject from current student/form state
   if(selectedStudent){
     // Student already loaded from bar — go straight to preview
     buildReportPreview();
