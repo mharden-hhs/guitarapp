@@ -2545,8 +2545,7 @@ function initTokenClient(retryCount){
 }
 
 function silentSignIn(hint){
-  // Uses prompt:'' (no UI) + login_hint to silently restore the session.
-  // If it fails (token expired, permissions revoked), falls back to showing the banner.
+  if(!google?.accounts?.oauth2){ showSignInBanner(); return; }
   try{
     const silentClient = google.accounts.oauth2.initTokenClient({
       client_id: getClientId(),
@@ -2554,14 +2553,10 @@ function silentSignIn(hint){
       prompt: '',
       login_hint: hint,
       callback(resp){
-        if(resp.error || !resp.access_token){
-          // Silent refresh failed — show gentle banner, don't force a popup
-          showSignInBanner();
-          return;
-        }
+        if(resp.error || !resp.access_token){ showSignInBanner(); return; }
         accessToken = resp.access_token;
         if(typeof gapi !== 'undefined') gapi.client.setToken({access_token: accessToken});
-        fetchUserInfo(true); // true = silent (no "Signed in as…" toast on auto-restore)
+        fetchUserInfo(true);
       }
     });
     silentClient.requestAccessToken({prompt:'', login_hint: hint});
@@ -2580,7 +2575,7 @@ function handleToken(resp){
   if(resp.error){ toast('Sign-in failed: '+resp.error,'fas fa-triangle-exclamation','#e74c3c'); return; }
   accessToken=resp.access_token;
   if(typeof gapi!=='undefined') gapi.client.setToken({access_token:accessToken});
-  fetchUserInfo(false); // explicit sign-in — show toast
+  fetchUserInfo(false);
 }
 async function fetchUserInfo(silent=false){
   if(!accessToken) return;
@@ -2590,8 +2585,6 @@ async function fetchUserInfo(silent=false){
     const email = u.email || u.sub || '';
     const name  = u.name || u.given_name || (email ? email.split('@')[0] : '');
     if(!email){
-      // No email returned — token likely missing openid/profile/email scopes.
-      // Force a fresh consent to pick up the new scopes.
       showSignInBanner();
       if(!silent){
         toast('Please sign in again to grant updated permissions','fas fa-triangle-exclamation','#f39c12');
@@ -2608,7 +2601,6 @@ async function fetchUserInfo(silent=false){
     updateSharedSheetBadge();
     fetchAssessmentNames();
     loadStudentsFromSheet(true);
-    // Silently attempt config pull — ignore "no data" errors (tab not pushed yet)
     const cfgId=(config.driveSettings.configSheetId||'').trim();
     if(cfgId&&cfgId.length>10){
       try{ await pullConfigFromSheet(true); }
@@ -2638,32 +2630,40 @@ function setSignedIn(name,email){
   document.getElementById('statusDot').className='sdot ok';
   document.getElementById('statusText').textContent='Connected: '+email;
 }
+
 function signIn(){
-  const cid=getClientId();
-  if(!cid){ toast('Client ID missing','fas fa-key','#f39c12'); return; }
-  if(tokenClient){
-    tokenClient.requestAccessToken({prompt:'select_account'});
+  // IMPORTANT: This must be called directly from a user tap/click event.
+  // Safari blocks OAuth flows triggered from timers or async callbacks.
+  if(!google?.accounts?.oauth2){
+    toast('Google sign-in is loading — please try again in a moment','fas fa-triangle-exclamation','#f39c12');
+    initTokenClient(0);
     return;
   }
-  // tokenClient not ready yet — retry up to ~3s (handles slow iPad/mobile loads)
-  let attempts = 0;
-  const retry = setInterval(()=>{
-    attempts++;
-    if(tokenClient){
-      clearInterval(retry);
-      tokenClient.requestAccessToken({prompt:'select_account'});
-    } else if(attempts >= 10){
-      clearInterval(retry);
-      // Last attempt: try to re-initialise GIS then show a gentler message
-      initTokenClient(0);
-      setTimeout(()=>{
-        if(tokenClient) tokenClient.requestAccessToken({prompt:'select_account'});
-        else toast('Sign-in not ready yet — please try again in a moment','fas fa-triangle-exclamation','#f39c12');
-      }, 500);
-    } else {
-      initTokenClient(0);
-    }
-  }, 300);
+  // Create a fresh client each explicit sign-in to avoid stale state
+  // Use prompt:'' — avoids Safari popup blocker; GIS handles the account picker
+  // when no existing session is found
+  try{
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: getClientId(),
+      scope: SCOPES,
+      callback: handleToken,
+      error_callback(err){
+        console.warn('OAuth error:', err);
+        // On popup_failed_to_open, try consent prompt as fallback
+        if(err.type === 'popup_failed_to_open' || err.type === 'popup_closed'){
+          try{ client.requestAccessToken({prompt:'consent'}); }
+          catch(e2){ toast('Sign-in blocked — please allow popups for this site','fas fa-triangle-exclamation','#e74c3c'); }
+        } else {
+          toast('Sign-in failed — please try again','fas fa-triangle-exclamation','#e74c3c');
+        }
+      }
+    });
+    client.requestAccessToken({prompt:''});
+    tokenClient = client;
+  }catch(e){
+    console.warn('signIn error:', e);
+    toast('Sign-in failed — please try again','fas fa-triangle-exclamation','#e74c3c');
+  }
 }
 function signOut(){
   if(accessToken) google.accounts.oauth2.revoke(accessToken,()=>{});
