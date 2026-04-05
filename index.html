@@ -2512,7 +2512,9 @@ function loadGoogleAPIs(){
   document.head.appendChild(s1);
   const s2=document.createElement('script');
   s2.src='https://accounts.google.com/gsi/client';
-  s2.onload=initTokenClient;
+  // Use a short delay after onload — Safari/iPad can fire onload before
+  // google.accounts.oauth2 is fully initialised
+  s2.onload=()=>{ setTimeout(()=>initTokenClient(0), 100); };
   document.head.appendChild(s2);
 }
 async function initGapiClient(){
@@ -2520,13 +2522,23 @@ async function initGapiClient(){
     await gapi.client.init({discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']});
   }catch(e){console.warn('GAPI init',e);}
 }
-function initTokenClient(){
+function initTokenClient(retryCount){
+  if(retryCount===undefined) retryCount=0;
   const cid=getClientId(); if(!cid) return;
+  // Guard: google.accounts.oauth2 may not be ready yet on slow/mobile connections
+  if(typeof google==='undefined' || !google.accounts || !google.accounts.oauth2){
+    if(retryCount < 10){
+      setTimeout(()=>initTokenClient(retryCount+1), 300);
+    } else {
+      console.warn('GIS never became ready after retries');
+      showSignInBanner();
+    }
+    return;
+  }
   try{
     tokenClient=google.accounts.oauth2.initTokenClient({
       client_id:cid, scope:SCOPES, callback:handleToken,
     });
-    // Attempt silent sign-in if we have a stored email from a previous session
     const lastEmail = localStorage.getItem('guitar_last_signed_in_email');
     if(lastEmail) silentSignIn(lastEmail);
     else showSignInBanner();
@@ -2630,10 +2642,29 @@ function setSignedIn(name,email){
 function signIn(){
   const cid=getClientId();
   if(!cid){ toast('Client ID missing','fas fa-key','#f39c12'); return; }
-  if(!tokenClient) initTokenClient();
-  if(!tokenClient){ toast('Google APIs not loaded yet, please wait','fas fa-triangle-exclamation','#e74c3c'); return; }
-  // select_account shows the account picker without forcing full re-consent each time
-  tokenClient.requestAccessToken({prompt:'select_account'});
+  if(tokenClient){
+    tokenClient.requestAccessToken({prompt:'select_account'});
+    return;
+  }
+  // tokenClient not ready yet — retry up to ~3s (handles slow iPad/mobile loads)
+  let attempts = 0;
+  const retry = setInterval(()=>{
+    attempts++;
+    if(tokenClient){
+      clearInterval(retry);
+      tokenClient.requestAccessToken({prompt:'select_account'});
+    } else if(attempts >= 10){
+      clearInterval(retry);
+      // Last attempt: try to re-initialise GIS then show a gentler message
+      initTokenClient(0);
+      setTimeout(()=>{
+        if(tokenClient) tokenClient.requestAccessToken({prompt:'select_account'});
+        else toast('Sign-in not ready yet — please try again in a moment','fas fa-triangle-exclamation','#f39c12');
+      }, 500);
+    } else {
+      initTokenClient(0);
+    }
+  }, 300);
 }
 function signOut(){
   if(accessToken) google.accounts.oauth2.revoke(accessToken,()=>{});
