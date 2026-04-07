@@ -2544,7 +2544,7 @@ function removeScaleOption(scaleId,oi){
 }
 function saveAndApplyScales(){
   saveConfig(); render();
-  toast('Scales saved & applied','fas fa-check-circle','#27ae60');
+  toast('Scales saved — remember to push config to sheet to share with others','fas fa-check-circle','#27ae60');
 }
 
 /* ── SECTIONS BUILDER ──────────────────────────────────────── */
@@ -2898,9 +2898,18 @@ async function pullConfigFromSheet(silent=false){
     }
     const raw=data.values&&data.values[0]&&data.values[0][0];
     if(!raw) throw new Error('Config tab exists but is empty — push settings first');
+    // Preserve any custom scales that exist locally but not in the sheet config
+    const localCustomScales = (config.scales||[]).filter(s=>
+      !['scale_standard','scale_frequency','scale_yesno','scale_effort'].includes(s.id) &&
+      !s.id.startsWith('scale_migrated')
+    );
     config=JSON.parse(raw);
     config.driveSettings.configSheetId = sheetId;
-    migrateConfig(); // ensure scales exist after loading config from sheet
+    migrateConfig(); // ensure built-in scales exist after loading config from sheet
+    // Re-add any local custom scales that the sheet config doesn't have
+    localCustomScales.forEach(ls=>{
+      if(!config.scales.find(s=>s.id===ls.id)) config.scales.push(ls);
+    });
     saveConfig(); initState(); render();
     populateAdminSections(); populateAdminClasses(); populateDriveSettings();
     if(!silent) setStatus('Connected','ok');
