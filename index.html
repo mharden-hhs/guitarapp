@@ -417,7 +417,7 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
   <label style="font-size:12px;font-weight:700;color:#555;margin:0;white-space:nowrap;">Assessment Name</label>
   <input type="text" id="assessmentName" placeholder="e.g. Term 1 Final, Semester 2 Mid-term..."
     style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:4px 10px;outline:none;width:280px;"
-    oninput="autoSave()"
+    oninput="autoSave(); onFormAssessmentChange()"
     onfocus="showAssessmentNameSuggestions()"
     onblur="setTimeout(hideAssessmentNameSuggestions,200)"
   />
@@ -1994,20 +1994,47 @@ function populateRosterSelectors(){
   assSel.innerHTML = '<option value="">Select assessment…</option>' +
     knownAssessmentNames.map(n=>`<option value="${esc(n)}" ${n===prevAss?'selected':''}>${esc(n)}</option>`).join('');
 
-  // If current form has values, pre-select them
-  if(!prevCls){
+  // Pre-select from current form if nothing already chosen
+  if(!clsSel.value){
     const cls = (document.getElementById('classSelect')||{}).value||'';
     if(cls) clsSel.value = cls;
   }
-  if(!prevAss){
+  if(!assSel.value){
     const ass = getAssessmentName();
     if(ass) assSel.value = ass;
   }
 
-  rosterClass      = clsSel.value;
-  rosterAssessment = assSel.value;
-  if(rosterClass && rosterAssessment) loadRosterData();
-  else renderRosterList();
+  const newCls  = clsSel.value;
+  const newAss  = assSel.value;
+
+  // Always reload if both are set — handles the case where names arrived
+  // asynchronously after the sidebar was already open
+  if(newCls && newAss){
+    const changed = newCls !== rosterClass || newAss !== rosterAssessment;
+    rosterClass      = newCls;
+    rosterAssessment = newAss;
+    if(changed || !Object.keys(rosterData).length) loadRosterData();
+    else renderRosterList();
+  } else {
+    rosterClass      = newCls;
+    rosterAssessment = newAss;
+    renderRosterList();
+  }
+}
+
+function onFormAssessmentChange(){
+  if(!rosterOpen) return;
+  const ass = getAssessmentName();
+  const assSel = document.getElementById('rosterAssessSelect');
+  if(!assSel || !ass) return;
+  // If the new name matches a known tab, select it and reload
+  const opt = Array.from(assSel.options).find(o=>o.value===ass);
+  if(opt && assSel.value !== ass){
+    assSel.value = ass;
+    rosterAssessment = ass;
+    rosterData = {};
+    if(rosterClass) loadRosterData();
+  }
 }
 
 function onRosterClassChange(){
