@@ -3900,6 +3900,7 @@ function buildReportHTML(personalNote){
         <span class="rpt-meta-pill"><strong>Grade:</strong> ${selectedStudent?selectedStudent.grade:(m.grade||'')}</span>
         <span class="rpt-meta-pill"><strong>Teacher:</strong> ${esc(teacher)}</span>
         <span class="rpt-meta-pill"><strong>Date:</strong> ${dateStr}</span>
+        ${getAssessmentName()?`<span class="rpt-meta-pill"><strong>Assessment:</strong> ${esc(getAssessmentName())}</span>`:''}
         ${(config.customFields||[]).filter(f=>m.customFields&&m.customFields[f.id]).map(f=>
           `<span class="rpt-meta-pill"><strong>${esc(f.label)}:</strong> ${esc(m.customFields[f.id])}</span>`
         ).join('')}
