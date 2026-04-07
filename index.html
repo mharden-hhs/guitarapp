@@ -2544,7 +2544,8 @@ function removeScaleOption(scaleId,oi){
 }
 function saveAndApplyScales(){
   saveConfig(); render();
-  toast('Scales saved — remember to push config to sheet to share with others','fas fa-check-circle','#27ae60');
+  toast('Scales saved & applied','fas fa-check-circle','#27ae60');
+  if(accessToken && config.driveSettings.configSheetId) pushConfigToSheet(true);
 }
 
 /* ── SECTIONS BUILDER ──────────────────────────────────────── */
@@ -2836,15 +2837,14 @@ function resetAllConfig(){
 }
 
 /* ═══ CONFIG SHEET SYNC ════════════════════════════════════════ */
-async function pushConfigToSheet(){
+async function pushConfigToSheet(silent=false){
   // Read directly from the input field so admin doesn't need to hit Save first
   const inputEl = document.getElementById('adminConfigSheetId');
   const sheetId = (inputEl ? inputEl.value.trim() : '') || config.driveSettings.configSheetId;
-  if(!sheetId){ toast('Enter a Config Sheet ID first','fas fa-triangle-exclamation','#f39c12'); return; }
-  if(!accessToken){ toast('Not signed in to Drive','fas fa-triangle-exclamation','#e74c3c'); return; }
-  setStatus('Pushing config...','busy');
+  if(!sheetId){ if(!silent) toast('Enter a Config Sheet ID first','fas fa-triangle-exclamation','#f39c12'); return; }
+  if(!accessToken){ if(!silent) toast('Not signed in to Drive','fas fa-triangle-exclamation','#e74c3c'); return; }
+  if(!silent) setStatus('Pushing config...','busy');
   try{
-    // Ensure the Config tab exists — creates it with header if missing
     await ensureTab(sheetId, 'Config');
     const configJson = JSON.stringify(config);
     const resp = await fetch(
@@ -2861,14 +2861,15 @@ async function pushConfigToSheet(){
     );
     const result = await resp.json();
     if(result.error) throw new Error(result.error.message);
-    // Persist the sheet ID into config if it wasn't already saved
     config.driveSettings.configSheetId = sheetId;
     saveConfig();
-    setStatus('Saved','ok');
-    toast('Config pushed to Google Sheet','fas fa-upload','#27ae60');
+    if(!silent) setStatus('Saved','ok');
+    if(!silent) toast('Config pushed to Google Sheet','fas fa-upload','#27ae60');
   }catch(e){
-    setStatus('Error','');
-    toast('Push failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');
+    if(!silent){
+      setStatus('Error','');
+      toast('Push failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');
+    }
     console.error('pushConfigToSheet error',e);
   }
 }
