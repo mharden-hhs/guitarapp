@@ -2440,16 +2440,17 @@ function populateAdminScales(){
   const BUILT_IN = ['scale_standard','scale_frequency','scale_yesno','scale_effort'];
   wrap.innerHTML = config.scales.map((scale,si)=>{
     const isBuiltIn = BUILT_IN.includes(scale.id);
+    const sid = scale.id; // capture id for safe use in handlers
     return `
     <div class="sec-builder" style="margin-bottom:12px;">
       <div class="sec-builder-head">
         <i class="fas fa-sliders" style="color:var(--accent);font-size:13px;"></i>
         <input type="text" value="${esc(scale.name)}" placeholder="Scale name..."
           ${isBuiltIn?'disabled style="color:#888;"':''}
-          onchange="config.scales[${si}].name=this.value"/>
+          oninput="scaleSetName('${sid}',this.value)"/>
         ${isBuiltIn
           ? '<span style="font-size:10px;color:#aaa;padding:2px 8px;background:#f0f0f0;border-radius:8px;">Built-in</span>'
-          : `<button class="btn-icon" style="color:#e74c3c;border-color:#e74c3c;" onclick="deleteScale('${scale.id}')" title="Delete scale"><i class="fas fa-trash"></i></button>`
+          : `<button class="btn-icon" style="color:#e74c3c;border-color:#e74c3c;" onclick="deleteScale('${sid}')" title="Delete scale"><i class="fas fa-trash"></i></button>`
         }
       </div>
       <div style="padding:8px 12px;background:#fafafa;border-radius:0 0 8px 8px;border:1px solid #e8e8e8;border-top:none;">
@@ -2461,21 +2462,21 @@ function populateAdminScales(){
             <input type="text" value="${esc(opt.label)}" placeholder="Label..."
               style="font-size:12px;border:1px solid #ddd;border-radius:5px;padding:3px 7px;outline:none;"
               ${isBuiltIn?'disabled':''}
-              onchange="config.scales[${si}].options[${oi}].label=this.value"/>
+              oninput="scaleSetOpt('${sid}',${oi},'label',this.value)"/>
             <input type="text" value="${esc(opt.short)}" placeholder="Short..."
               style="font-size:12px;border:1px solid #ddd;border-radius:5px;padding:3px 7px;outline:none;"
               ${isBuiltIn?'disabled':''}
-              onchange="config.scales[${si}].options[${oi}].short=this.value"/>
+              oninput="scaleSetOpt('${sid}',${oi},'short',this.value)"/>
             <input type="number" value="${opt.value===null?'':opt.value}" placeholder="N/A"
               style="font-size:12px;border:1px solid #ddd;border-radius:5px;padding:3px 7px;outline:none;"
               ${isBuiltIn?'disabled':''}
               title="Numeric weight for averaging. Leave blank for N/A."
-              onchange="config.scales[${si}].options[${oi}].value=this.value===''?null:parseFloat(this.value)"/>
-            ${isBuiltIn?'<span></span>':`<button class="btn-icon" onclick="removeScaleOption('${scale.id}',${oi})" title="Remove"><i class="fas fa-xmark" style="font-size:11px;"></i></button>`}
+              oninput="scaleSetOpt('${sid}',${oi},'value',this.value===''?null:parseFloat(this.value))"/>
+            ${isBuiltIn?'<span></span>':`<button class="btn-icon" onclick="removeScaleOption('${sid}',${oi})" title="Remove"><i class="fas fa-xmark" style="font-size:11px;"></i></button>`}
           </div>`).join('')}
         ${!isBuiltIn?`
         <div style="display:flex;gap:6px;margin-top:6px;">
-          <button class="btn btn-sm btn-outline-secondary" onclick="addScaleOption('${scale.id}')">
+          <button class="btn btn-sm btn-outline-secondary" onclick="addScaleOption('${sid}')">
             <i class="fas fa-plus"></i> Add option
           </button>
           <button class="btn btn-sm btn-primary" onclick="saveAndApplyScales()">
@@ -2487,6 +2488,14 @@ function populateAdminScales(){
   }).join('');
 }
 
+function scaleSetName(scaleId, val){
+  const scale = config.scales.find(s=>s.id===scaleId);
+  if(scale){ scale.name = val; saveConfig(); }
+}
+function scaleSetOpt(scaleId, oi, field, val){
+  const scale = config.scales.find(s=>s.id===scaleId);
+  if(scale && scale.options[oi]!==undefined){ scale.options[oi][field] = val; saveConfig(); }
+}
 function addNewScale(){
   const id = 'scale_custom_'+Date.now();
   config.scales.push({
