@@ -3603,26 +3603,52 @@ async function loadTabStudents(sharedId, tabName){
 function loadStudentRow(row, tabName){
   closeHistory();
   initState();
-  // Restore meta fields
+
+  // Fixed columns: Name(0) Email(1) Class(2) Grade(3) Date(4) Teacher(5)
   const nameEl=document.getElementById('sbInput'); if(nameEl) nameEl.value=row[0]||'';
   const clsEl=document.getElementById('classSelect'); if(clsEl) clsEl.value=row[2]||'';
   const dateEl=document.getElementById('assessDate'); if(dateEl) dateEl.value=row[4]||'';
   const teacherEl=document.getElementById('teacherName'); if(teacherEl) teacherEl.value=row[5]||'';
+
   // Restore selectedStudent from DB if email matches
   if(row[1]){
     const found=STUDENT_DB.find(s=>s.email.toLowerCase()===row[1].toLowerCase());
     if(found){ selectedStudent=found; applyStudentChip(); }
   }
-  // Restore scores (columns 6 onward)
-  const all=getAllItems();
-  all.forEach((item,i)=>{
-    const score=row[6+i]||null;
-    if(state[item.id]) state[item.id].score=score||null;
+
+  // Score columns start after the 6 fixed cols + any custom fields
+  const customCount = (config.customFields||[]).length;
+  const itemStart   = 6 + customCount;
+  const all         = getAllItems();
+
+  all.forEach((item, i)=>{
+    const raw = row[itemStart + i] || '';
+    if(!raw || !state[item.id]) return;
+
+    // Scores are stored as "Short (value)" e.g. "M-10 (10)" or "4 (4)"
+    // Extract the numeric value from inside the parentheses
+    const match = raw.match(/\(([^)]+)\)$/);
+    if(match){
+      const parsed = match[1] === 'N/A' ? null : match[1];
+      state[item.id].score = parsed !== null ? String(parsed) : null;
+    } else {
+      // Fallback: try treating the raw string as a direct numeric value
+      const num = parseFloat(raw);
+      state[item.id].score = isNaN(num) ? null : String(num);
+    }
   });
-  // Restore comments (second to last column)
-  const commentsIdx=6+all.length+1;
+
+  // Restore custom field values
+  (config.customFields||[]).forEach((f, i)=>{
+    const el = document.getElementById('cf_'+f.id);
+    if(el) el.value = row[6+i] || '';
+  });
+
+  // Comments are the last column; Avg Score is second-to-last — skip it
+  const commentsIdx = itemStart + all.length + 1; // +1 to skip Avg Score
   const ta=document.getElementById('overallComments');
   if(ta) ta.value=row[commentsIdx]||'';
+
   // Set assessment name
   const anEl=document.getElementById('assessmentName'); if(anEl) anEl.value=tabName;
   renderAssessment(); updateSummary(); autoSave();
