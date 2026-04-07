@@ -1180,14 +1180,38 @@ function renderLegend(){
   const bar = document.getElementById('legendBar');
   if(!bar) return;
   migrateConfig();
-  const scale = getItemScale({});
+
+  // Collect all unique scales actually in use across sections and items
+  const usedScaleIds = new Set();
+  usedScaleIds.add(config.defaultScaleId || 'scale_standard'); // always show default
+  config.sections.forEach(sec=>{
+    if(sec.scaleId) usedScaleIds.add(sec.scaleId);
+    sec.subsections.forEach(sub=>sub.items.forEach(item=>{
+      if(item.scaleId) usedScaleIds.add(item.scaleId);
+    }));
+  });
+
+  const usedScales = [...usedScaleIds]
+    .map(id=>config.scales.find(s=>s.id===id))
+    .filter(Boolean);
+
   const PILL_BG = ['var(--s4)','var(--s3)','var(--s2)','var(--s1)','var(--s0)','var(--sna)'];
-  bar.innerHTML = '<span style="font-size:11px;color:#888;margin-right:4px;">Score:</span>' +
-    scale.options.map((opt,i)=>{
-      const bg = PILL_BG[i] || 'var(--s0)';
+  const multiScale = usedScales.length > 1;
+
+  bar.innerHTML = usedScales.map((scale, si)=>{
+    const pills = scale.options.map((opt,i)=>{
+      const bg  = PILL_BG[i] || 'var(--s0)';
       const col = opt.value===null ? '#555' : 'white';
       return `<span class="lpill" style="background:${bg};color:${col};">${esc(opt.short)} — ${esc(opt.label)}</span>`;
     }).join('');
+    const label = multiScale
+      ? `<span style="font-size:11px;color:#888;margin-right:4px;white-space:nowrap;">${esc(scale.name)}:</span>`
+      : `<span style="font-size:11px;color:#888;margin-right:4px;">Score:</span>`;
+    const sep = (si < usedScales.length-1)
+      ? '<span style="display:inline-block;width:1px;background:#ddd;height:16px;margin:0 10px;vertical-align:middle;"></span>'
+      : '';
+    return `<span style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;">${label}${pills}</span>${sep}`;
+  }).join('');
 }
 
 function renderStudentBar(){
