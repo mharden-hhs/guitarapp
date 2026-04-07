@@ -3638,6 +3638,31 @@ function loadStudentRow(row, tabName){
     }
   });
 
+  // After restoring scores, check if the stored values match the current scale.
+  // If not (e.g. data was scored with a 10-point scale but form has Standard 4-0),
+  // find the scale whose option values best match the restored scores and apply it.
+  const restoredValues = all
+    .map(i => state[i.id]?.score)
+    .filter(v => v !== null && v !== undefined);
+
+  if(restoredValues.length){
+    const currentScaleOpts = getItemScale({}).options.map(o => String(o.value));
+    const allMatch = restoredValues.every(v => currentScaleOpts.includes(v));
+    if(!allMatch){
+      // Find the scale in the library whose option values cover the restored scores
+      const matchingScale = config.scales.find(scale =>
+        restoredValues.every(v =>
+          scale.options.some(o => String(o.value) === v || v === 'null')
+        )
+      );
+      if(matchingScale && matchingScale.id !== config.defaultScaleId){
+        // Apply this scale as a section-level override on all sections
+        config.sections.forEach(sec => { sec.scaleId = matchingScale.id; });
+        saveConfig();
+      }
+    }
+  }
+
   // Restore custom field values
   (config.customFields||[]).forEach((f, i)=>{
     const el = document.getElementById('cf_'+f.id);
