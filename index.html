@@ -760,26 +760,23 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
       <i class="fas fa-wand-magic-sparkles"></i> New School Setup Wizard
     </button>
   </div>
-  </div><!-- /admin-body -->
 
   <!-- TAB: SETUP WIZARD -->
-  <div class="admin-section" id="tab-setup" style="padding:0;">
+  <div class="admin-section" id="tab-setup">
     <!-- Wizard progress bar -->
-    <div id="setupProgress" style="background:#f5f5f5;border-bottom:1px solid #e0e0e0;padding:12px 20px;display:flex;gap:0;align-items:center;">
+    <div id="setupProgress" style="background:#f5f5f5;border:1px solid #e0e0e0;border-radius:10px;padding:12px 16px;display:flex;gap:0;align-items:center;margin-bottom:18px;">
     </div>
     <!-- Wizard step content -->
-    <div class="admin-body" style="padding:20px;min-height:380px;">
-      <div id="setupStepContent"></div>
-      <!-- Navigation -->
-      <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #f0f0f0;" id="setupNavBar">
-        <button class="btn btn-outline-secondary" id="setupBtnBack" onclick="setupNav(-1)"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="btn btn-primary" id="setupBtnNext" onclick="setupNav(1)">Next <i class="fas fa-arrow-right"></i></button>
-        <button class="btn btn-success" id="setupBtnExport" onclick="runSetupExport()" style="display:none;"><i class="fas fa-download"></i> Generate &amp; Download</button>
-      </div>
+    <div id="setupStepContent" style="min-height:320px;"></div>
+    <!-- Navigation -->
+    <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #f0f0f0;" id="setupNavBar">
+      <button class="btn btn-outline-secondary" id="setupBtnBack" onclick="setupNav(-1)"><i class="fas fa-arrow-left"></i> Back</button>
+      <button class="btn btn-primary" id="setupBtnNext" onclick="setupNav(1)">Next <i class="fas fa-arrow-right"></i></button>
+      <button class="btn btn-success" id="setupBtnExport" onclick="runSetupExport()" style="display:none;"><i class="fas fa-download"></i> Generate &amp; Download</button>
     </div>
   </div>
-</div>
-</div>
+
+  </div><!-- /admin-body -->
 
 <!-- ══ REPORT & EMAIL MODAL ═══════════════════════════════════════ -->
 <div class="report-overlay" id="reportModal" onclick="if(event.target===this)closeReportModal()">
