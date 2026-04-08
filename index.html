@@ -737,15 +737,14 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
     </div>
     <hr style="margin:14px 0;"/>
     <div style="font-size:14px;font-weight:700;color:var(--dk);margin-bottom:14px;">Admin PIN</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
       <input type="password" id="newPinInput" placeholder="Enter new 4-digit PIN" maxlength="4" style="width:160px;letter-spacing:4px;font-size:16px;text-align:center;"/>
-      <button class="btn btn-sm btn-outline-primary ms-2" onclick="saveNewPin()"><i class="fas fa-check"></i> Update PIN</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="saveNewPin()"><i class="fas fa-check"></i> Update PIN</button>
     </div>
-    <div class="drive-cfg-row" style="border:none;padding-top:0;">
-      <label style="font-size:12px;color:#888;">Current PIN is stored locally in your browser only.</label>
-    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">Current PIN is stored locally in your browser only.</div>
     <hr style="margin:14px 0;"/>
     <div style="font-size:13px;font-weight:600;color:var(--dk);margin-bottom:10px;">Export / Import Config</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
       <button class="btn btn-sm btn-outline-primary" onclick="exportConfig()"><i class="fas fa-download"></i> Export config JSON</button>
       <label class="btn btn-sm btn-outline-secondary" style="cursor:pointer;margin:0;">
         <i class="fas fa-upload"></i> Import config JSON
@@ -759,7 +758,7 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
     <button class="btn btn-sm" style="background:#7b1fa2;color:white;" onclick="openSetupWizard()">
       <i class="fas fa-wand-magic-sparkles"></i> New School Setup Wizard
     </button>
-  </div>
+  </div><!-- /tab-settings -->
 
   <!-- TAB: SETUP WIZARD -->
   <div class="admin-section" id="tab-setup">
