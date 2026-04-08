@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Music Performance Assessment Portal</title>
+<title>HPS Music Department Assessment Portal</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap"/>
@@ -361,8 +361,11 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
     <span id="saveBadge" style="font-size:11px;background:rgba(255,255,255,.1);padding:3px 9px;border-radius:12px;color:#aaa;display:none;">
       <i class="fas fa-circle-dot" style="color:#27ae60;font-size:9px;margin-right:3px;"></i>Saved
     </span>
-    <button id="adminBtn" class="btn btn-sm" style="background:rgba(232,184,109,.15);color:var(--accent);border:1px solid rgba(232,184,109,.3);font-size:12px;" onclick="promptAdminPin()">
-      <i class="fas fa-lock"></i> Admin
+    <button id="settingsBtn" class="btn btn-sm" style="background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.2);font-size:12px;" onclick="openSettings()">
+      <i class="fas fa-sliders"></i> Settings
+    </button>
+    <button id="adminBtn" class="btn btn-sm" style="background:rgba(232,184,109,.15);color:var(--accent);border:1px solid rgba(232,184,109,.3);font-size:12px;display:none;" onclick="openAdmin()">
+      <i class="fas fa-shield-halved"></i> Admin
     </button>
     <button class="btn btn-sm" style="background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.2);font-size:12px;" onclick="openDriveModal()">
       <i class="fab fa-google-drive" style="color:#fbbc04;"></i> Drive
@@ -512,8 +515,8 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
 <div class="admin-overlay" id="adminOverlay" onclick="if(event.target===this)closeAdmin()">
 <div class="admin-box">
   <div class="admin-header">
-    <i class="fas fa-sliders"></i>
-    <h3>Admin Panel</h3>
+    <i class="fas fa-sliders" id="adminModalIcon"></i>
+    <h3 id="adminModalTitle">Settings</h3>
     <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:white;border:1px solid rgba(255,255,255,.2);" onclick="closeAdmin()"><i class="fas fa-xmark"></i></button>
   </div>
   <div class="admin-tabs">
@@ -521,8 +524,11 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
     <div class="admin-tab" onclick="switchTab('classes')"><i class="fas fa-users" style="margin-right:5px;"></i>Classes &amp; Fields</div>
     <div class="admin-tab" onclick="switchTab('scales')"><i class="fas fa-sliders" style="margin-right:5px;"></i>Scales</div>
     <div class="admin-tab" onclick="switchTab('templates')"><i class="fas fa-layer-group" style="margin-right:5px;"></i>Templates</div>
-    <div class="admin-tab" onclick="switchTab('drive')"><i class="fab fa-google-drive" style="margin-right:5px;"></i>Drive Settings</div>
-    <div class="admin-tab" onclick="switchTab('settings')"><i class="fas fa-gear" style="margin-right:5px;"></i>Settings</div>
+    <div class="admin-tab admin-only-tab" onclick="switchTab('drive')" style="display:none;"><i class="fab fa-google-drive" style="margin-right:5px;"></i>Drive Settings</div>
+    <div class="admin-tab admin-only-tab" onclick="switchTab('settings')" style="display:none;"><i class="fas fa-gear" style="margin-right:5px;"></i>Settings</div>
+    <div class="admin-tab admin-only-tab" id="setupTab" onclick="switchTab('setup')" style="display:none;">
+      <i class="fas fa-wand-magic-sparkles" style="margin-right:5px;color:#7b1fa2;"></i>New School Setup
+    </div>
   </div>
 
   <!-- TAB: SECTIONS -->
@@ -751,8 +757,31 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
       </label>
       <button class="btn btn-sm btn-outline-danger" onclick="resetAllConfig()"><i class="fas fa-trash"></i> Reset all config</button>
     </div>
+    <hr style="margin:14px 0;"/>
+    <div style="font-size:13px;font-weight:600;color:#7b1fa2;margin-bottom:6px;"><i class="fas fa-wand-magic-sparkles" style="margin-right:6px;"></i>District Setup</div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px;">Configure this app for a new school in the district. Generates a standalone pre-configured HTML file for deployment.</div>
+    <button class="btn btn-sm" style="background:#7b1fa2;color:white;" onclick="openSetupWizard()">
+      <i class="fas fa-wand-magic-sparkles"></i> New School Setup Wizard
+    </button>
   </div>
   </div><!-- /admin-body -->
+
+  <!-- TAB: SETUP WIZARD -->
+  <div class="admin-section" id="tab-setup" style="padding:0;">
+    <!-- Wizard progress bar -->
+    <div id="setupProgress" style="background:#f5f5f5;border-bottom:1px solid #e0e0e0;padding:12px 20px;display:flex;gap:0;align-items:center;">
+    </div>
+    <!-- Wizard step content -->
+    <div class="admin-body" style="padding:20px;min-height:380px;">
+      <div id="setupStepContent"></div>
+      <!-- Navigation -->
+      <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid #f0f0f0;" id="setupNavBar">
+        <button class="btn btn-outline-secondary" id="setupBtnBack" onclick="setupNav(-1)"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-primary" id="setupBtnNext" onclick="setupNav(1)">Next <i class="fas fa-arrow-right"></i></button>
+        <button class="btn btn-success" id="setupBtnExport" onclick="runSetupExport()" style="display:none;"><i class="fas fa-download"></i> Generate &amp; Download</button>
+      </div>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -1085,7 +1114,7 @@ const DEFAULT_CONFIG = {
     {id:'assessDate',label:'Date',type:'date',width:'145px',required:false},
     {id:'teacherName',label:'Teacher',type:'select',placeholder:'',width:'140px',required:false},
   ],
-  driveSettings:{ trackingSheetId:'1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w', defaultFolderId:'', configSheetId:'', defaultAssessmentName:'', syncInterval:60 },
+  driveSettings:{ trackingSheetId:'1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w', defaultFolderId:'', configSheetId:'1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w', defaultAssessmentName:'', syncInterval:60 },
   adminPin:'1234',
 };
 
@@ -2364,6 +2393,48 @@ function rosterStartFresh(email){
 }
 
 /* ═══ PIN SYSTEM ═══════════════════════════════════════════════ */
+/* ═══ ACCESS CONTROL ══════════════════════════════════════════ */
+const ADMIN_EMAIL = 'mharden@hanoverschools.org';
+function isAdminUser(){ return signedInEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase(); }
+
+function openSettings(){
+  // All signed-in users — shows teacher tabs only
+  _openAdminModal(false);
+}
+
+function openAdmin(){
+  // Admin account only — shows all tabs including Drive Settings, Settings, Setup
+  if(!isAdminUser()){
+    toast('Admin access is restricted to the system administrator','fas fa-shield-halved','#e74c3c');
+    return;
+  }
+  _openAdminModal(true);
+}
+
+function _openAdminModal(isAdmin){
+  migrateConfig();
+  // Set modal title and icon
+  const titleEl = document.getElementById('adminModalTitle');
+  const iconEl  = document.getElementById('adminModalIcon');
+  if(titleEl) titleEl.textContent = isAdmin ? 'Admin Panel' : 'Settings';
+  if(iconEl)  iconEl.className   = isAdmin ? 'fas fa-shield-halved' : 'fas fa-sliders';
+  // Show/hide admin-only tabs
+  document.querySelectorAll('.admin-only-tab').forEach(t=>t.style.display = isAdmin ? '' : 'none');
+  // Always open on first tab
+  switchTab('sections');
+  // Populate all tabs
+  populateAdminSections();
+  populateAdminClasses();
+  populateAdminScales();
+  renderAdminTemplateList();
+  if(isAdmin){
+    populateDriveSettings();
+    populateBranding();
+  }
+  document.getElementById('adminOverlay').classList.add('open');
+}
+
+/* PIN system kept for ?setup=1 URL flow only */
 function promptAdminPin(){
   ['p0','p1','p2','p3'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('pinError').textContent='';
@@ -2384,24 +2455,14 @@ function pinKey(e,idx){
 function checkPin(){
   const entered=['p0','p1','p2','p3'].map(id=>document.getElementById(id).value).join('');
   if(entered===config.adminPin){
-    closePinModal(); openAdmin();
+    closePinModal();
+    if(window._afterPin){ const fn=window._afterPin; window._afterPin=null; fn(); }
+    else openAdmin();
   }else{
     document.getElementById('pinError').textContent='Incorrect PIN. Please try again.';
     ['p0','p1','p2','p3'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('p0').focus();
   }
-}
-
-/* ═══ ADMIN PANEL ══════════════════════════════════════════════ */
-function openAdmin(){
-  migrateConfig(); // ensure scales exist before any admin tab tries to use them
-  populateAdminSections();
-  populateAdminClasses();
-  populateDriveSettings();
-  renderAdminTemplateList();
-  populateBranding();
-  populateAdminScales();
-  document.getElementById('adminOverlay').classList.add('open');
 }
 function populateBranding(){
   const b = config.branding || DEFAULT_CONFIG.branding;
@@ -2427,9 +2488,10 @@ function saveBranding(){
 }
 function closeAdmin(){document.getElementById('adminOverlay').classList.remove('open');}
 function switchTab(id){
-  document.querySelectorAll('.admin-tab').forEach((t,i)=>{t.classList.toggle('active',['sections','classes','scales','templates','drive','settings'][i]===id);});
+  document.querySelectorAll('.admin-tab').forEach((t,i)=>{t.classList.toggle('active',['sections','classes','scales','templates','drive','settings','setup'][i]===id);});
   document.querySelectorAll('.admin-section').forEach(s=>{s.classList.toggle('active',s.id==='tab-'+id);});
   if(id==='scales') populateAdminScales();
+  if(id==='setup') renderSetupStep();
 }
 
 /* ── Custom Fields ──────────────────────────────────────────── */
@@ -2949,8 +3011,8 @@ async function pushConfigToSheet(silent=false){
 }
 async function pullConfigFromSheet(silent=false){
   const inputEl = document.getElementById('adminConfigSheetId');
-  const sheetId = (inputEl ? inputEl.value.trim() : '') || config.driveSettings.configSheetId;
-  if(!sheetId){ if(!silent) toast('Enter a Config Sheet ID first','fas fa-triangle-exclamation','#f39c12'); return; }
+  const sheetId = (inputEl ? inputEl.value.trim() : '') || config.driveSettings.configSheetId || CONFIG_SHEET_ID;
+  if(!sheetId){ if(!silent) toast('No Config Sheet ID configured','fas fa-triangle-exclamation','#f39c12'); return; }
   if(!accessToken){ if(!silent) toast('Not signed in to Drive','fas fa-triangle-exclamation','#e74c3c'); return; }
   if(!silent) setStatus('Pulling config...','busy');
   try{
@@ -3093,8 +3155,11 @@ async function fetchUserInfo(silent=false){
     updateSharedSheetBadge();
     fetchAssessmentNames();
     loadStudentsFromSheet(true);
-    const cfgId=(config.driveSettings.configSheetId||'').trim();
-    if(cfgId&&cfgId.length>10){
+    // Always pull config from the district sheet on sign-in.
+    // Uses the stored configSheetId, falling back to the hardcoded CONFIG_SHEET_ID
+    // so non-admin teachers who can't configure Drive Settings still get current settings.
+    const cfgId = (config.driveSettings.configSheetId||'').trim() || CONFIG_SHEET_ID;
+    if(cfgId && cfgId.length > 10){
       try{ await pullConfigFromSheet(true); }
       catch(e){ console.info('Config pull skipped:', e.message); }
     }
@@ -3121,6 +3186,9 @@ function setSignedIn(name,email){
   document.getElementById('userBadge').style.display='inline-flex';
   document.getElementById('statusDot').className='sdot ok';
   document.getElementById('statusText').textContent='Connected: '+email;
+  // Show Admin button only for the designated admin account
+  const adminBtn = document.getElementById('adminBtn');
+  if(adminBtn) adminBtn.style.display = isAdminUser() ? 'inline-flex' : 'none';
 }
 
 function signIn(){
@@ -3793,7 +3861,10 @@ function showConfirm({ title='Are you sure?', body='', okLabel='Confirm', okClas
    Sheet: 1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w
    Columns: A=Email, B=Name, C=Grade, D=Class
    ═══════════════════════════════════════════════════════════════ */
-const USERS_SHEET_ID = '1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w';
+const USERS_SHEET_ID  = '1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w';
+// Hardcoded district config sheet — all teachers pull from here on sign-in
+// Set this to the same sheet used in Admin → Drive Settings → Config Sheet ID
+const CONFIG_SHEET_ID = '1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w';
 const USERS_CACHE_KEY = 'guitar_student_db_cache';
 
 let STUDENT_DB = loadCachedStudents();
@@ -4425,6 +4496,498 @@ async function pullTemplatesFromSheet(){
   }catch(e){ setStatus('Error',''); toast('Pull failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c'); }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   NEW SCHOOL SETUP WIZARD
+   Generates a pre-configured standalone HTML file for a new school.
+   Accessed via Admin → Settings → "New School Setup Wizard"
+   or via URL param ?setup=1 after admin PIN.
+   ═══════════════════════════════════════════════════════════════ */
+
+let setupStep = 0;
+let setupData = {};  // collects all wizard answers
+
+const SETUP_STEPS = [
+  { id:'identity',  title:'School Identity',     icon:'fas fa-school' },
+  { id:'sheets',    title:'Google Sheets',        icon:'fab fa-google-drive' },
+  { id:'staff',     title:'Staff & Courses',      icon:'fas fa-users' },
+  { id:'templates', title:'Templates',            icon:'fas fa-layer-group' },
+  { id:'review',    title:'Review',               icon:'fas fa-list-check' },
+  { id:'export',    title:'Export',               icon:'fas fa-download' },
+];
+
+function openSetupWizard(){
+  setupStep = 0;
+  setupData = {
+    schoolName:   '',
+    appName:      'Music Department Assessment Portal',
+    subtitle:     new Date().getFullYear()+'-'+(new Date().getFullYear()+1),
+    icon:         'fas fa-music',
+    usersSheetId: '',
+    trackingSheetId: '',
+    configSheetId: '',
+    teachers:     [],
+    courses:      [],
+    classes:      [],
+    copyTemplates: true,
+    adminPin:     '1234',
+  };
+  // Show the setup tab
+  const tab = document.getElementById('setupTab');
+  if(tab) tab.style.display='';
+  switchTab('setup');
+}
+
+function renderSetupProgress(){
+  const wrap = document.getElementById('setupProgress');
+  if(!wrap) return;
+  wrap.innerHTML = SETUP_STEPS.map((s,i)=>{
+    const done    = i < setupStep;
+    const active  = i === setupStep;
+    const color   = done ? '#27ae60' : active ? '#7b1fa2' : '#ccc';
+    const bg      = done ? '#e8f5e9' : active ? '#f3eeff' : '#f5f5f5';
+    const border  = active ? '2px solid #7b1fa2' : '2px solid transparent';
+    const connector = i < SETUP_STEPS.length-1
+      ? `<div style="flex:1;height:2px;background:${done?'#27ae60':'#e0e0e0'};margin:0 4px;"></div>`
+      : '';
+    return `
+      <div style="display:flex;align-items:center;flex:1;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:${bg};border:${border};display:flex;align-items:center;justify-content:center;cursor:pointer;"
+               onclick="${done?`setupGoTo(${i})`:''}">
+            ${done
+              ? `<i class="fas fa-check" style="color:#27ae60;font-size:11px;"></i>`
+              : `<i class="${s.icon}" style="color:${color};font-size:11px;"></i>`}
+          </div>
+          <div style="font-size:9px;color:${color};font-weight:${active?700:400};text-align:center;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis;">${s.title}</div>
+        </div>
+        ${connector}
+      </div>`;
+  }).join('');
+}
+
+function setupGoTo(i){
+  if(i < setupStep){ setupStep=i; renderSetupStep(); }
+}
+
+function renderSetupStep(){
+  renderSetupProgress();
+  const content = document.getElementById('setupStepContent');
+  const back    = document.getElementById('setupBtnBack');
+  const next    = document.getElementById('setupBtnNext');
+  const exp     = document.getElementById('setupBtnExport');
+  if(!content) return;
+
+  back.style.display = setupStep===0 ? 'none' : '';
+  next.style.display = setupStep===SETUP_STEPS.length-1 ? 'none' : '';
+  exp.style.display  = setupStep===SETUP_STEPS.length-1 ? '' : 'none';
+
+  const step = SETUP_STEPS[setupStep];
+  switch(step.id){
+    case 'identity':  content.innerHTML = setupStepIdentity(); break;
+    case 'sheets':    content.innerHTML = setupStepSheets();   break;
+    case 'staff':     content.innerHTML = setupStepStaff();    break;
+    case 'templates': content.innerHTML = setupStepTemplates();break;
+    case 'review':    content.innerHTML = setupStepReview();   break;
+    case 'export':    content.innerHTML = setupStepExport();   break;
+  }
+}
+
+function setupNav(dir){
+  // Save current step inputs before moving
+  setupSaveCurrentStep();
+  setupStep = Math.max(0, Math.min(SETUP_STEPS.length-1, setupStep+dir));
+  renderSetupStep();
+}
+
+function setupSaveCurrentStep(){
+  const step = SETUP_STEPS[setupStep].id;
+  if(step==='identity'){
+    setupData.schoolName = document.getElementById('swSchoolName')?.value.trim()||'';
+    setupData.appName    = document.getElementById('swAppName')?.value.trim()||'Music Department Assessment Portal';
+    setupData.subtitle   = document.getElementById('swSubtitle')?.value.trim()||'';
+    setupData.icon       = document.getElementById('swIcon')?.value||'fas fa-music';
+    setupData.adminPin   = document.getElementById('swPin')?.value.trim()||'1234';
+  }
+  if(step==='sheets'){
+    setupData.usersSheetId    = document.getElementById('swUsersSheet')?.value.trim()||'';
+    setupData.trackingSheetId = document.getElementById('swTrackSheet')?.value.trim()||'';
+    setupData.configSheetId   = document.getElementById('swConfigSheet')?.value.trim()||'';
+  }
+  if(step==='staff'){
+    // Tags saved live via addSetupTag/removeSetupTag
+  }
+  if(step==='templates'){
+    setupData.copyTemplates = document.getElementById('swCopyTemplates')?.checked ?? true;
+  }
+  if(step==='review'){
+    // Re-read editable fields
+    setupData.adminPin = document.getElementById('swReviewPin')?.value.trim()||setupData.adminPin;
+  }
+}
+
+/* ── Step renderers ──────────────────────────────────────────── */
+function setupStepIdentity(){
+  return `
+    <div style="font-size:15px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fas fa-school" style="color:#7b1fa2;margin-right:7px;"></i>School Identity</div>
+    <div style="font-size:12px;color:#888;margin-bottom:18px;">This information will be baked into the exported HTML file and appear in the app header and email reports.</div>
+
+    <div class="drive-cfg-row">
+      <label>School Name</label>
+      <input type="text" id="swSchoolName" placeholder="e.g. Hanover Middle School" value="${esc(setupData.schoolName)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;"/>
+    </div>
+    <div class="drive-cfg-row">
+      <label>App Name</label>
+      <input type="text" id="swAppName" placeholder="e.g. Music Department Assessment Portal" value="${esc(setupData.appName)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;"/>
+    </div>
+    <div class="drive-cfg-row">
+      <label>Subtitle / Year</label>
+      <input type="text" id="swSubtitle" placeholder="e.g. 2025-2026" value="${esc(setupData.subtitle)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;"/>
+    </div>
+    <div class="drive-cfg-row">
+      <label>Header Icon</label>
+      <select id="swIcon" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;" onchange="document.getElementById('swIconPreview').className=this.value+' fa-lg';document.getElementById('swIconPreview').style.color='#7b1fa2'">
+        <option value="fas fa-music" ${setupData.icon==='fas fa-music'?'selected':''}>🎵 Music</option>
+        <option value="fas fa-guitar" ${setupData.icon==='fas fa-guitar'?'selected':''}>🎸 Guitar</option>
+        <option value="fas fa-drum" ${setupData.icon==='fas fa-drum'?'selected':''}>🥁 Drum / Band</option>
+        <option value="fas fa-microphone" ${setupData.icon==='fas fa-microphone'?'selected':''}>🎤 Vocal</option>
+        <option value="fas fa-star" ${setupData.icon==='fas fa-star'?'selected':''}>⭐ Star</option>
+      </select>
+      <i id="swIconPreview" class="${esc(setupData.icon)} fa-lg" style="color:#7b1fa2;margin-left:10px;"></i>
+    </div>
+    <div class="drive-cfg-row">
+      <label>Admin PIN</label>
+      <input type="text" id="swPin" maxlength="4" placeholder="4-digit PIN" value="${esc(setupData.adminPin)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;width:100px;letter-spacing:4px;"/>
+      <span style="font-size:11px;color:#888;">Default: 1234</span>
+    </div>
+    <div style="background:#e8f4fd;border-radius:8px;padding:10px 14px;font-size:12px;color:#1a5276;margin-top:10px;">
+      <i class="fas fa-circle-info" style="margin-right:5px;"></i>
+      Preview: <strong>${esc(setupData.appName||'Music Department Assessment Portal')}</strong> — <em>${esc(setupData.schoolName||'New School')}</em>
+    </div>`;
+}
+
+function setupStepSheets(){
+  return `
+    <div style="font-size:15px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fab fa-google-drive" style="color:#1a73e8;margin-right:7px;"></i>Google Sheets</div>
+    <div style="font-size:12px;color:#888;margin-bottom:18px;">Set up the three Google Sheets this school will use. Each sheet ID is found in its URL: <code style="background:#f5f5f5;padding:1px 5px;border-radius:3px;">docs.google.com/spreadsheets/d/<strong>[ID HERE]</strong>/edit</code></div>
+
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-users" style="color:#27ae60;margin-right:5px;"></i>Student Database Sheet ID</label>
+      <input type="text" id="swUsersSheet" placeholder="Sheet with USERS tab (Email/Name/Grade/Class)" value="${esc(setupData.usersSheetId)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
+      <button class="btn btn-sm btn-outline-success ms-2" onclick="setupValidateSheet('swUsersSheet','USERS')"><i class="fas fa-plug"></i> Test</button>
+    </div>
+    <div id="swUsersSheetStatus" style="font-size:11px;margin-left:210px;margin-bottom:8px;"></div>
+
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-table" style="color:#7b1fa2;margin-right:5px;"></i>Class Tracking Sheet ID</label>
+      <input type="text" id="swTrackSheet" placeholder="Shared assessment results sheet" value="${esc(setupData.trackingSheetId)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
+      <button class="btn btn-sm btn-outline-success ms-2" onclick="setupValidateSheet('swTrackSheet',null)"><i class="fas fa-plug"></i> Test</button>
+    </div>
+    <div id="swTrackSheetStatus" style="font-size:11px;margin-left:210px;margin-bottom:8px;"></div>
+
+    <div class="drive-cfg-row">
+      <label><i class="fas fa-cloud-arrow-up" style="color:#1a73e8;margin-right:5px;"></i>Config Sheet ID</label>
+      <input type="text" id="swConfigSheet" placeholder="Where admin config is stored/synced" value="${esc(setupData.configSheetId)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
+      <button class="btn btn-sm btn-outline-success ms-2" onclick="setupValidateSheet('swConfigSheet',null)"><i class="fas fa-plug"></i> Test</button>
+    </div>
+    <div id="swConfigSheetStatus" style="font-size:11px;margin-left:210px;margin-bottom:8px;"></div>
+
+    <div style="background:#fff3cd;border-radius:8px;padding:10px 14px;font-size:12px;color:#856404;margin-top:10px;">
+      <i class="fas fa-triangle-exclamation" style="margin-right:5px;"></i>
+      The signed-in Google account must have <strong>Editor</strong> access to all three sheets. The Tracking and Config sheets can be the same sheet if preferred.
+    </div>`;
+}
+
+function setupStepStaff(){
+  if(!setupData.teachers) setupData.teachers=[];
+  if(!setupData.courses)  setupData.courses=[];
+  if(!setupData.classes)  setupData.classes=[];
+  const tagHtml = (arr, key) => arr.map((v,i)=>
+    `<span class="class-tag">${esc(v)}<button onclick="removeSetupTag('${key}',${i})">×</button></span>`
+  ).join('');
+  return `
+    <div style="font-size:15px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fas fa-users" style="color:#1a73e8;margin-right:7px;"></i>Staff &amp; Courses</div>
+    <div style="font-size:12px;color:#888;margin-bottom:18px;">These populate the dropdowns on the assessment form. Teachers and classes can also be added later through the admin panel.</div>
+
+    <div style="font-size:13px;font-weight:600;color:var(--dk);margin-bottom:6px;">Teachers</div>
+    <div id="swTeacherTags" style="margin-bottom:8px;min-height:32px;">${tagHtml(setupData.teachers,'teachers')}</div>
+    <div style="display:flex;gap:7px;margin-bottom:16px;">
+      <input type="text" id="swTeacherInp" placeholder="Teacher name (e.g. Smith)" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;width:200px;" onkeydown="if(event.key==='Enter')addSetupTag('teachers','swTeacherInp','swTeacherTags')"/>
+      <button class="btn btn-sm btn-success" onclick="addSetupTag('teachers','swTeacherInp','swTeacherTags')"><i class="fas fa-plus"></i> Add</button>
+    </div>
+
+    <div style="font-size:13px;font-weight:600;color:var(--dk);margin-bottom:6px;">Courses</div>
+    <div id="swCourseTags" style="margin-bottom:8px;min-height:32px;">${tagHtml(setupData.courses,'courses')}</div>
+    <div style="display:flex;gap:7px;margin-bottom:16px;">
+      <input type="text" id="swCourseInp" placeholder="e.g. Band, Chorus, Piano" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;width:200px;" onkeydown="if(event.key==='Enter')addSetupTag('courses','swCourseInp','swCourseTags')"/>
+      <button class="btn btn-sm btn-success" onclick="addSetupTag('courses','swCourseInp','swCourseTags')"><i class="fas fa-plus"></i> Add</button>
+    </div>
+
+    <div style="font-size:13px;font-weight:600;color:var(--dk);margin-bottom:6px;">Class Codes</div>
+    <div id="swClassTags" style="margin-bottom:8px;min-height:32px;">${tagHtml(setupData.classes,'classes')}</div>
+    <div style="display:flex;gap:7px;">
+      <input type="text" id="swClassInp" placeholder="e.g. 6A, 7B, 8C" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;width:160px;" onkeydown="if(event.key==='Enter')addSetupTag('classes','swClassInp','swClassTags')"/>
+      <button class="btn btn-sm btn-success" onclick="addSetupTag('classes','swClassInp','swClassTags')"><i class="fas fa-plus"></i> Add</button>
+    </div>`;
+}
+
+function setupStepTemplates(){
+  const tpls = getTemplates();
+  return `
+    <div style="font-size:15px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fas fa-layer-group" style="color:#7b1fa2;margin-right:7px;"></i>Assessment Templates</div>
+    <div style="font-size:12px;color:#888;margin-bottom:18px;">Choose whether to include the current school's saved templates in the new school's installation as a starting point.</div>
+
+    <div style="border:1.5px solid #e0e0e0;border-radius:10px;padding:14px;margin-bottom:12px;cursor:pointer;transition:border-color .15s;" onclick="document.getElementById('swCopyTemplates').checked=true" id="swTplOptCopy">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <input type="radio" name="swTplOpt" id="swCopyTemplates" value="1" ${setupData.copyTemplates?'checked':''} style="margin-top:2px;"/>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--dk);">Copy current templates (${tpls.length} template${tpls.length!==1?'s':''})</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;">Include ${esc(tpls.map(t=>t.name).join(', ')||'existing templates')} as a starting point. The new school can modify or delete them.</div>
+        </div>
+      </label>
+    </div>
+
+    <div style="border:1.5px solid #e0e0e0;border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s;" onclick="document.getElementById('swBlankTemplates').checked=true">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+        <input type="radio" name="swTplOpt" id="swBlankTemplates" value="0" ${!setupData.copyTemplates?'checked':''} style="margin-top:2px;"/>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--dk);">Start blank</div>
+          <div style="font-size:12px;color:#888;margin-top:2px;">No templates pre-loaded. The music teacher at the new school will build their own from scratch.</div>
+        </div>
+      </label>
+    </div>`;
+}
+
+function setupStepReview(){
+  setupSaveCurrentStep(); // ensure latest values captured
+  const tpls = getTemplates();
+  const row = (label, val, ok) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f5f5f5;">
+      <i class="fas fa-${ok?'check-circle':'triangle-exclamation'}" style="color:${ok?'#27ae60':'#f39c12'};width:16px;"></i>
+      <span style="font-size:12px;font-weight:600;color:#555;min-width:180px;">${label}</span>
+      <span style="font-size:12px;color:${val?'#333':'#aaa'};font-family:${label.includes('Sheet')?'monospace':'inherit'};">${val||'<em>Not set</em>'}</span>
+    </div>`;
+  return `
+    <div style="font-size:15px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fas fa-list-check" style="color:#27ae60;margin-right:7px;"></i>Review Configuration</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;">Check everything looks correct before generating the file. Click any completed step in the progress bar to go back and edit.</div>
+
+    <div style="background:#fafafa;border:1px solid #eee;border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+      ${row('School Name',       setupData.schoolName,      !!setupData.schoolName)}
+      ${row('App Name',          setupData.appName,         !!setupData.appName)}
+      ${row('Subtitle',          setupData.subtitle,        !!setupData.subtitle)}
+      ${row('Icon',              setupData.icon,            !!setupData.icon)}
+      ${row('Student DB Sheet',  setupData.usersSheetId,    !!setupData.usersSheetId)}
+      ${row('Tracking Sheet',    setupData.trackingSheetId, !!setupData.trackingSheetId)}
+      ${row('Config Sheet',      setupData.configSheetId,   !!setupData.configSheetId)}
+      ${row('Teachers',          setupData.teachers.join(', '), setupData.teachers.length>0)}
+      ${row('Courses',           setupData.courses.join(', '),  setupData.courses.length>0)}
+      ${row('Classes',           setupData.classes.join(', '),  setupData.classes.length>0)}
+      ${row('Templates',         setupData.copyTemplates?`${tpls.length} copied from HHS`:'Start blank', true)}
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <label style="font-size:12px;font-weight:600;color:#555;">Admin PIN for new school:</label>
+      <input type="text" id="swReviewPin" maxlength="4" value="${esc(setupData.adminPin)}" style="width:80px;font-size:14px;letter-spacing:4px;text-align:center;border:1px solid #ccc;border-radius:6px;padding:4px 8px;outline:none;"/>
+    </div>`;
+}
+
+function setupStepExport(){
+  const missing = [];
+  if(!setupData.schoolName)      missing.push('School Name');
+  if(!setupData.usersSheetId)    missing.push('Student DB Sheet ID');
+  if(!setupData.trackingSheetId) missing.push('Tracking Sheet ID');
+  const hasIssues = missing.length > 0;
+  return `
+    <div style="font-size:15px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fas fa-download" style="color:#1a73e8;margin-right:7px;"></i>Export &amp; Deploy</div>
+    <div style="font-size:12px;color:#888;margin-bottom:16px;">The wizard will generate a standalone HTML file pre-configured for <strong>${esc(setupData.schoolName||'the new school')}</strong>. Download it and deploy to a web server.</div>
+
+    ${hasIssues ? `<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 14px;font-size:12px;color:#856404;margin-bottom:14px;">
+      <i class="fas fa-triangle-exclamation" style="margin-right:5px;"></i>
+      <strong>Missing required fields:</strong> ${missing.join(', ')}. Go back and complete these before exporting.
+    </div>` : ''}
+
+    <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:#1b5e20;margin-bottom:10px;"><i class="fas fa-rocket" style="margin-right:6px;"></i>After downloading, IT checklist:</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        ${[
+          ['1','Download the generated HTML file','fas fa-file-code'],
+          ['2','Deploy to GitHub Pages, school server, or any static host','fas fa-server'],
+          ['3','Note the deployment URL (e.g. https://hmsmusiceval.github.io)','fas fa-link'],
+          ['4','In Google Cloud Console → APIs &amp; Services → Credentials → your OAuth Client → Authorised JavaScript origins → add the deployment URL','fab fa-google'],
+          ['5','Share the URL with music teachers at the new school','fas fa-share'],
+          ['6','Teachers sign in with their school Google account and the app is ready','fas fa-check-circle'],
+        ].map(([n,text,icon])=>`
+          <div style="display:flex;align-items:flex-start;gap:10px;font-size:12px;color:#333;">
+            <i class="${icon}" style="color:#27ae60;margin-top:2px;width:14px;text-align:center;flex-shrink:0;"></i>
+            <span>${text}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div id="setupExportResult"></div>`;
+}
+
+/* ── Wizard helpers ───────────────────────────────────────────── */
+function addSetupTag(key, inputId, wrapId){
+  const inp = document.getElementById(inputId);
+  const v = (inp?.value||'').trim();
+  if(!v) return;
+  if(!setupData[key].includes(v)) setupData[key].push(v);
+  inp.value = '';
+  const wrap = document.getElementById(wrapId);
+  if(wrap) wrap.innerHTML = setupData[key].map((t,i)=>
+    `<span class="class-tag">${esc(t)}<button onclick="removeSetupTag('${key}',${i})">×</button></span>`
+  ).join('');
+}
+function removeSetupTag(key, i){
+  setupData[key].splice(i,1);
+  renderSetupStep();
+}
+
+async function setupValidateSheet(inputId, requiredTab){
+  const id = document.getElementById(inputId)?.value.trim();
+  const statusId = inputId.replace('swU','swU').replace('swT','swT').replace('swC','swC')+'Status';
+  const statusEl = document.getElementById(inputId+'Status');
+  if(!id){ if(statusEl) statusEl.innerHTML='<span style="color:#e74c3c;">Enter a Sheet ID first</span>'; return; }
+  if(!accessToken){ if(statusEl) statusEl.innerHTML='<span style="color:#e74c3c;">Sign in to Drive first</span>'; return; }
+  if(statusEl) statusEl.innerHTML='<i class="fas fa-rotate fa-spin" style="color:#aaa;font-size:11px;"></i> Testing…';
+  try{
+    const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets.properties.title`,{
+      headers:{Authorization:'Bearer '+accessToken}
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error.message);
+    const tabs = (data.sheets||[]).map(s=>s.properties.title);
+    if(requiredTab && !tabs.includes(requiredTab)){
+      if(statusEl) statusEl.innerHTML=`<span style="color:#f39c12;"><i class="fas fa-triangle-exclamation"></i> Accessible but no "${requiredTab}" tab found — make sure the tab exists</span>`;
+    } else {
+      if(statusEl) statusEl.innerHTML=`<span style="color:#27ae60;"><i class="fas fa-check-circle"></i> ✓ Connected — ${tabs.length} tab${tabs.length!==1?'s':''}: ${tabs.slice(0,4).join(', ')}${tabs.length>4?'…':''}</span>`;
+    }
+  }catch(e){
+    if(statusEl) statusEl.innerHTML=`<span style="color:#e74c3c;"><i class="fas fa-xmark-circle"></i> ${esc(e.message||'Could not access sheet — check the ID and sharing permissions')}</span>`;
+  }
+}
+
+/* ── Generate the configured HTML file ───────────────────────── */
+async function runSetupExport(){
+  setupSaveCurrentStep();
+  const missing = [];
+  if(!setupData.schoolName)      missing.push('School Name');
+  if(!setupData.usersSheetId)    missing.push('Student DB Sheet ID');
+  if(!setupData.trackingSheetId) missing.push('Tracking Sheet ID');
+  if(missing.length){
+    toast('Please complete: '+missing.join(', '),'fas fa-triangle-exclamation','#f39c12');
+    return;
+  }
+
+  const resultEl = document.getElementById('setupExportResult');
+  if(resultEl) resultEl.innerHTML='<div style="font-size:12px;color:#888;"><i class="fas fa-rotate fa-spin" style="margin-right:6px;"></i>Generating configured file…</div>';
+
+  // Fetch the current page source
+  try{
+    const resp = await fetch(window.location.href);
+    let src = await resp.text();
+
+    // Replace school-specific hardcoded values
+    const tpls = setupData.copyTemplates ? getTemplates() : [];
+
+    // Build the new DEFAULT_CONFIG branding block
+    const newBranding = `branding:{
+    appName:${JSON.stringify(setupData.appName||'Music Department Assessment Portal')},
+    appSubtitle:${JSON.stringify(setupData.subtitle||'2025-2026')},
+    schoolName:${JSON.stringify(setupData.schoolName||'New School')},
+    icon:${JSON.stringify(setupData.icon||'fas fa-music')},
+  },`;
+
+    // Replace USERS_SHEET_ID constant
+    src = src.replace(
+      /const USERS_SHEET_ID\s*=\s*'[^']+';/,
+      `const USERS_SHEET_ID = '${setupData.usersSheetId}';`
+    );
+
+    // Replace CONFIG_SHEET_ID constant
+    src = src.replace(
+      /const CONFIG_SHEET_ID\s*=\s*'[^']+';/,
+      `const CONFIG_SHEET_ID = '${setupData.configSheetId||setupData.trackingSheetId}';`
+    );
+
+    // Replace tracking sheet in DEFAULT_CONFIG driveSettings
+    src = src.replace(
+      /trackingSheetId:'[^']*'/,
+      `trackingSheetId:'${setupData.trackingSheetId}'`
+    );
+
+    // Replace configSheetId in DEFAULT_CONFIG
+    src = src.replace(
+      /configSheetId:'[^']*'/,
+      `configSheetId:'${setupData.configSheetId}'`
+    );
+
+    // Replace default teachers, courses, classes in DEFAULT_CONFIG
+    src = src.replace(
+      /teachers:\[.*?\],(\s*courses:)/s,
+      `teachers:${JSON.stringify(setupData.teachers.length?setupData.teachers:['Teacher'])},\n  courses:`
+    );
+    src = src.replace(
+      /courses:\[.*?\],(\s*customFields:)/s,
+      `courses:${JSON.stringify(setupData.courses.length?setupData.courses:['Music'])},\n  customFields:`
+    );
+    src = src.replace(
+      /classes:\[.*?\],(\s*teachers:)/s,
+      `classes:${JSON.stringify(setupData.classes.length?setupData.classes:['1A'])},\n  teachers:`
+    );
+
+    // Replace branding in DEFAULT_CONFIG
+    src = src.replace(
+      /branding:\{[\s\S]*?icon:'fas fa-[^']+',\s*\},/,
+      newBranding
+    );
+
+    // Replace admin PIN default
+    src = src.replace(
+      /adminPin:'[^']*'/,
+      `adminPin:'${setupData.adminPin||'1234'}'`
+    );
+
+    // Inject templates if copying
+    if(tpls.length){
+      src = src.replace(
+        /if\(!getTemplates\(\)\.length\) saveTemplates\(\[builtInTemplate\]\);/,
+        `if(!getTemplates().length) saveTemplates(${JSON.stringify(tpls)});`
+      );
+    }
+
+    // Add a comment banner at the top of the script block
+    const banner = `/* ═══════════════════════════════════════════════════
+   Configured for: ${setupData.schoolName}
+   Generated: ${new Date().toISOString().split('T')[0]}
+   District app: HHS Music Department Assessment Portal
+   ═══════════════════════════════════════════════════ */\n`;
+    src = src.replace('<script>\n/* ═══════════', `<script>\n${banner}/* ═══════════`);
+
+    // Download
+    const blob = new Blob([src], {type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const slug = (setupData.schoolName||'newschool').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+    a.download = `music_assessment_${slug}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    if(resultEl) resultEl.innerHTML=`
+      <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 14px;font-size:12px;color:#1b5e20;margin-top:10px;">
+        <i class="fas fa-check-circle" style="margin-right:6px;color:#27ae60;"></i>
+        <strong>File generated:</strong> music_assessment_${slug}.html — now follow the IT checklist above to deploy it.
+      </div>`;
+    toast(`File generated for ${setupData.schoolName}`,'fas fa-download','#27ae60');
+
+  }catch(e){
+    console.error('Export error',e);
+    if(resultEl) resultEl.innerHTML=`<div style="background:#fdecea;border:1px solid #ef9a9a;border-radius:8px;padding:10px 14px;font-size:12px;color:#c62828;margin-top:10px;">
+      <i class="fas fa-triangle-exclamation" style="margin-right:6px;"></i>Export failed: ${esc(e.message||'Unknown error')}
+    </div>`;
+    toast('Export failed: '+e.message,'fas fa-triangle-exclamation','#e74c3c');
+  }
+}
+
 /* ═══ INIT ══════════════════════════════════════════════════════ */
 (function init(){
   loadConfig();
@@ -4463,6 +5026,13 @@ async function pullTemplatesFromSheet(){
 
   // Client ID is hardcoded — initialise token client immediately
   loadGoogleAPIs();
+
+  // Auto-open setup wizard if ?setup=1 in URL (for IT admin use)
+  if(new URLSearchParams(window.location.search).get('setup')==='1'){
+    const setupTabEl = document.getElementById('setupTab');
+    if(setupTabEl) setupTabEl.style.display='';
+    setTimeout(()=>{ promptAdminPin(); window._afterPin = ()=>openSetupWizard(); }, 500);
+  }
 
   // Refresh the "last synced X ago" badge text every 15s
   setInterval(updateSyncBadge, 15000);
