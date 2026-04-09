@@ -1106,7 +1106,7 @@ const DEFAULT_CONFIG = {
     {id:'assessDate',label:'Date',type:'date',width:'145px',required:false},
     {id:'teacherName',label:'Teacher',type:'select',placeholder:'',width:'140px',required:false},
   ],
-  driveSettings:{ trackingSheetId:'1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w', defaultFolderId:'', configSheetId:'1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w', defaultAssessmentName:'', syncInterval:60 },
+  driveSettings:{ trackingSheetId:'1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w', defaultFolderId:'18AEjSb3ePq5JbGnJbjPFx4Mstt2tgrNQ', configSheetId:'1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w', defaultAssessmentName:'', syncInterval:60 },
   adminPin:'1234',
 };
 
@@ -3862,6 +3862,8 @@ const USERS_SHEET_ID  = '1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w';
 // Hardcoded district config sheet — all teachers pull from here on sign-in
 // Set this to the same sheet used in Admin → Drive Settings → Config Sheet ID
 const CONFIG_SHEET_ID = '1h5EXqBDXVtxNkYWooC5oLgZ54LCoauE8Siuryq-QX4w';
+// District Drive folder — all school sheets created by the setup wizard land here
+const DISTRICT_FOLDER_ID = '18AEjSb3ePq5JbGnJbjPFx4Mstt2tgrNQ';
 const USERS_CACHE_KEY = 'guitar_student_db_cache';
 
 let STUDENT_DB = loadCachedStudents();
@@ -4667,39 +4669,51 @@ function setupStepSheets(){
   if(!setupData.domain) setupData.domain = 'hanoverschools.org';
   return `
     <div style="font-size:15px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fab fa-google-drive" style="color:#1a73e8;margin-right:7px;"></i>Google Sheets</div>
-    <div style="font-size:12px;color:#888;margin-bottom:18px;">Set up the three Google Sheets this school will use. Each sheet ID is found in its URL: <code style="background:#f5f5f5;padding:1px 5px;border-radius:3px;">docs.google.com/spreadsheets/d/<strong>[ID HERE]</strong>/edit</code></div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">Set up the Google Sheets for this school. The Tracking and Config sheets can be the same sheet — useful if you want everything in one place.</div>
 
     <div class="drive-cfg-row" style="margin-bottom:14px;">
       <label><i class="fas fa-building-shield" style="color:#7b1fa2;margin-right:5px;"></i>School Domain</label>
       <input type="text" id="swDomain" placeholder="e.g. hanoverschools.org" value="${esc(setupData.domain)}"
         style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;width:220px;"/>
-      <span style="font-size:11px;color:#888;margin-left:8px;">All accounts at this domain will get automatic Editor access to the sheets.</span>
+      <span style="font-size:11px;color:#888;margin-left:8px;">All accounts at this domain will get automatic Editor access.</span>
+    </div>
+
+    <div style="background:#f8f6f2;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#555;">
+      <strong>Sheet ID</strong> is found in the URL: <code style="background:#f0ece4;padding:1px 5px;border-radius:3px;">docs.google.com/spreadsheets/d/<strong style="color:#7b1fa2;">[ID HERE]</strong>/edit</code>
+      &nbsp;·&nbsp; The Tracking and Config sheets <strong>can be the same sheet</strong>.
     </div>
 
     <div class="drive-cfg-row">
       <label><i class="fas fa-users" style="color:#27ae60;margin-right:5px;"></i>Student Database Sheet ID</label>
-      <input type="text" id="swUsersSheet" placeholder="Sheet with USERS tab (Email/Name/Grade/Class)" value="${esc(setupData.usersSheetId)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
+      <input type="text" id="swUsersSheet" placeholder="Sheet containing the USERS tab" value="${esc(setupData.usersSheetId)}"
+        style="font-size:12px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
       <button class="btn btn-sm btn-outline-success ms-2" onclick="setupValidateAndShare('swUsersSheet','USERS')"><i class="fas fa-plug"></i> Test &amp; Share</button>
     </div>
-    <div id="swUsersSheetStatus" style="font-size:11px;margin-left:210px;margin-bottom:8px;"></div>
+    <div id="swUsersSheetStatus" style="font-size:11px;padding-left:4px;margin-bottom:10px;color:#888;">
+      Must have a tab named <strong>USERS</strong> with columns: Email, Name, Grade, Class
+    </div>
 
     <div class="drive-cfg-row">
       <label><i class="fas fa-table" style="color:#7b1fa2;margin-right:5px;"></i>Class Tracking Sheet ID</label>
-      <input type="text" id="swTrackSheet" placeholder="Shared assessment results sheet" value="${esc(setupData.trackingSheetId)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
-      <button class="btn btn-sm btn-outline-success ms-2" onclick="setupValidateAndShare('swTrackSheet',null)"><i class="fas fa-plug"></i> Test &amp; Share</button>
+      <input type="text" id="swTrackSheet" placeholder="Paste ID or click Create →" value="${esc(setupData.trackingSheetId)}"
+        style="font-size:12px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
+      <button class="btn btn-sm btn-outline-primary ms-2" onclick="setupCreateSheet('swTrackSheet','swTrackSheetStatus','${esc(setupData.schoolName||'New School')} Music Assessment')"><i class="fas fa-plus"></i> Create</button>
+      <button class="btn btn-sm btn-outline-success ms-1" onclick="setupValidateAndShare('swTrackSheet',null)"><i class="fas fa-plug"></i> Test &amp; Share</button>
     </div>
-    <div id="swTrackSheetStatus" style="font-size:11px;margin-left:210px;margin-bottom:8px;"></div>
+    <div id="swTrackSheetStatus" style="font-size:11px;padding-left:4px;margin-bottom:10px;color:#888;">Assessment data goes here. One tab per assessment name.</div>
 
     <div class="drive-cfg-row">
       <label><i class="fas fa-cloud-arrow-up" style="color:#1a73e8;margin-right:5px;"></i>Config Sheet ID</label>
-      <input type="text" id="swConfigSheet" placeholder="Where admin config is stored/synced" value="${esc(setupData.configSheetId)}" style="font-size:13px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
-      <button class="btn btn-sm btn-outline-success ms-2" onclick="setupValidateAndShare('swConfigSheet',null)"><i class="fas fa-plug"></i> Test &amp; Share</button>
+      <input type="text" id="swConfigSheet" placeholder="Same as Tracking, or a separate sheet" value="${esc(setupData.configSheetId)}"
+        style="font-size:12px;border:1px solid #ccc;border-radius:6px;padding:5px 9px;outline:none;flex:1;font-family:monospace;"/>
+      <button class="btn btn-sm btn-outline-secondary ms-2" onclick="setupCopyTrackToConfig()" title="Use same sheet as Tracking"><i class="fas fa-copy"></i> Same as Tracking</button>
+      <button class="btn btn-sm btn-outline-success ms-1" onclick="setupValidateAndShare('swConfigSheet',null)"><i class="fas fa-plug"></i> Test &amp; Share</button>
     </div>
-    <div id="swConfigSheetStatus" style="font-size:11px;margin-left:210px;margin-bottom:8px;"></div>
+    <div id="swConfigSheetStatus" style="font-size:11px;padding-left:4px;margin-bottom:10px;color:#888;">Admin config is pushed/pulled here. Can be the same sheet as Tracking.</div>
 
-    <div style="background:#e8f5e9;border-radius:8px;padding:10px 14px;font-size:12px;color:#1b5e20;margin-top:10px;">
+    <div style="background:#e8f5e9;border-radius:8px;padding:10px 14px;font-size:12px;color:#1b5e20;margin-top:4px;">
       <i class="fas fa-circle-check" style="margin-right:5px;color:#27ae60;"></i>
-      <strong>Test &amp; Share</strong> validates each sheet is accessible and automatically grants <strong>Editor</strong> access to all <strong>${esc(setupData.domain||'hanoverschools.org')}</strong> accounts — no per-teacher sharing needed.
+      <strong>Test &amp; Share</strong> validates access and grants <strong>Editor</strong> access to all <strong>${esc(setupData.domain||'hanoverschools.org')}</strong> accounts automatically.
     </div>`;
 }
 
@@ -4849,6 +4863,57 @@ function removeSetupTag(key, i){
   renderSetupStep();
 }
 
+async function setupCreateSheet(inputId, statusId, title){
+  if(!accessToken){ toast('Sign in to Drive first','fas fa-triangle-exclamation','#e74c3c'); return; }
+  const statusEl = document.getElementById(statusId);
+  if(statusEl) statusEl.innerHTML='<i class="fas fa-rotate fa-spin" style="color:#aaa;font-size:11px;"></i> Creating sheet…';
+  try{
+    const r = await fetch('https://sheets.googleapis.com/v4/spreadsheets',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      body: JSON.stringify({properties:{title: title||'Music Assessment'}})
+    });
+    const data = await r.json();
+    if(data.error) throw new Error(data.error.message);
+    const id = data.spreadsheetId;
+    // Move into district folder if configured
+    if(DISTRICT_FOLDER_ID){
+      await fetch(`https://www.googleapis.com/drive/v3/files/${id}?addParents=${DISTRICT_FOLDER_ID}&removeParents=root&fields=id`,{
+        method:'PATCH',
+        headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+        body:'{}'
+      });
+    }
+    // Put the ID in the field
+    const inp = document.getElementById(inputId);
+    if(inp) inp.value = id;
+    // Save to setupData
+    setupSaveCurrentStep();
+    // Now share with domain
+    const domain = document.getElementById('swDomain')?.value.trim() || setupData.domain || 'hanoverschools.org';
+    await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions`,{
+      method:'POST',
+      headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+      body: JSON.stringify({type:'domain', role:'writer', domain})
+    });
+    const url = `https://docs.google.com/spreadsheets/d/${id}/edit`;
+    if(statusEl) statusEl.innerHTML=`<span style="color:#27ae60;"><i class="fas fa-check-circle"></i> Created &amp; shared with <strong>${esc(domain)}</strong> — <a href="${url}" target="_blank" style="color:#1a73e8;">Open sheet</a></span>`;
+    toast('Sheet created successfully','fas fa-check-circle','#27ae60');
+  }catch(e){
+    if(statusEl) statusEl.innerHTML=`<span style="color:#e74c3c;"><i class="fas fa-xmark-circle"></i> ${esc(e.message||'Create failed')}</span>`;
+  }
+}
+
+function setupCopyTrackToConfig(){
+  const trackId = document.getElementById('swTrackSheet')?.value.trim();
+  const configInp = document.getElementById('swConfigSheet');
+  if(!trackId){ toast('Enter or create the Tracking Sheet first','fas fa-triangle-exclamation','#f39c12'); return; }
+  if(configInp){ configInp.value = trackId; }
+  const statusEl = document.getElementById('swConfigSheetStatus');
+  if(statusEl) statusEl.innerHTML='<span style="color:#27ae60;"><i class="fas fa-check-circle"></i> Using same sheet as Tracking</span>';
+  setupSaveCurrentStep();
+}
+
 async function setupValidateAndShare(inputId, requiredTab){
   const id = document.getElementById(inputId)?.value.trim();
   const statusEl = document.getElementById(inputId+'Status');
@@ -4868,7 +4933,7 @@ async function setupValidateAndShare(inputId, requiredTab){
     if(data.error) throw new Error(data.error.message);
     const tabs = (data.sheets||[]).map(s=>s.properties.title);
 
-    if(requiredTab && !tabs.includes(requiredTab)){
+    if(requiredTab && !tabs.some(t=>t.toLowerCase()===requiredTab.toLowerCase())){
       if(statusEl) statusEl.innerHTML=`<span style="color:#f39c12;"><i class="fas fa-triangle-exclamation"></i> Accessible but no "${requiredTab}" tab found — make sure the tab exists</span>`;
       return;
     }
@@ -4946,6 +5011,8 @@ async function runSetupExport(){
       /const CONFIG_SHEET_ID\s*=\s*'[^']+';/,
       `const CONFIG_SHEET_ID = '${setupData.configSheetId||setupData.trackingSheetId}';`
     );
+
+    // DISTRICT_FOLDER_ID stays the same across all schools — district-wide
 
     // Replace tracking sheet in DEFAULT_CONFIG driveSettings
     src = src.replace(
