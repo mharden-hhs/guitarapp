@@ -3765,26 +3765,38 @@ function loadStudentRow(row, tabName){
   }
 
   // Score columns start after the 6 fixed cols + any custom fields
-  const customCount = (config.customFields||[]).length;
-  const itemStart   = 6 + customCount;
-  const all         = getAllItems();
+  // We use rosterHeader to determine the correct template and column layout
+  let customCount = (config.customFields||[]).length;
+  let itemStart   = 6 + customCount;
+  let all         = getAllItems();
 
-  // If the sheet header is available, check if the current template's items match it.
-  // If not, try to find a saved template whose items do match.
+  // If the sheet header is available, match the correct template by comparing item labels
   if(rosterHeader.length > itemStart){
-    const headerItems = rosterHeader.slice(itemStart, itemStart + all.length);
+    const headerItems = rosterHeader.slice(itemStart);
     const currentItems = all.map(i=>i.label);
-    const matches = headerItems.every((h,i) => currentItems[i] && currentItems[i].toLowerCase()===h.toLowerCase());
+    // Strip editable suffixes like " name" from header items for matching
+    const normalize = s => s.replace(/\s+name\s*$/i,'').toLowerCase().trim();
+    const matches = headerItems.length >= all.length &&
+      all.every((item,i) => normalize(headerItems[i]||'') === normalize(item.label));
+
     if(!matches){
-      // Find a template whose items match the sheet header
       const tpls = getTemplates();
       const matchingTpl = tpls.find(tpl=>{
-        const tplItems = tpl.sections.flatMap(s=>s.subsections.flatMap(ss=>ss.items)).map(i=>i.label);
-        return headerItems.every((h,i)=> tplItems[i] && tplItems[i].toLowerCase()===h.toLowerCase());
+        const tplItems = tpl.sections.flatMap(s=>s.subsections.flatMap(ss=>ss.items));
+        if(tplItems.length === 0) return false;
+        // Also check custom fields count matches
+        const tplCustomCount = (tpl.customFields||[]).length;
+        const tplItemStart = 6 + tplCustomCount;
+        const tplHeaderItems = rosterHeader.slice(tplItemStart);
+        return tplItems.length <= tplHeaderItems.length &&
+          tplItems.every((item,i) => normalize(tplHeaderItems[i]||'') === normalize(item.label));
       });
       if(matchingTpl){
         applyTemplate(matchingTpl, true);
-        // Re-initialise state after template change
+        // Recalculate after template change — custom fields and items may have changed
+        customCount = (config.customFields||[]).length;
+        itemStart   = 6 + customCount;
+        all         = getAllItems();
         initState();
       }
     }
