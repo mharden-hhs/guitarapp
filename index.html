@@ -2200,12 +2200,34 @@ async function loadRosterData(){
 
 function getRosterCompletion(row){
   // Work out how many items are scored from the sheet row
-  // Columns: Name(0) Email(1) Class(2) Grade(3) Date(4) Teacher(5) [customFields] [items...] Avg Comments
+  // Use rosterHeader to calculate correct offsets rather than current form state,
+  // since the sheet may have been saved with a different template/custom field count.
+  if(!row) return { scored:0, total:0, avg:'' };
+
+  if(rosterHeader.length > 6){
+    // Find where scores start by skipping fixed cols + any custom field cols
+    // Custom fields sit between Teacher(5) and the first item column
+    // We detect them by checking which cols come before a known item header pattern
+    const all = getAllItems();
+    const customCount = (config.customFields||[]).length;
+    const itemStart = 6 + customCount;
+    // Use header length to derive total item count
+    // Header: Name Email Class Grade Date Teacher [customFields...] [items...] Avg Comments
+    // So item count = header.length - itemStart - 2 (Avg + Comments)
+    const headerItemCount = Math.max(0, rosterHeader.length - itemStart - 2);
+    const total = headerItemCount || all.length;
+    const itemEnd = itemStart + total;
+    const scores = row.slice(itemStart, itemEnd);
+    const scored = scores.filter(s=>s&&s.trim()!=='').length;
+    const avg = row[itemEnd] || '';
+    return { scored, total, avg };
+  }
+
+  // Fallback: use current form state
   const all = getAllItems();
   const customCount = (config.customFields||[]).length;
   const itemStart = 6 + customCount;
   const itemEnd   = itemStart + all.length;
-  if(!row) return { scored:0, total:all.length, avg:'' };
   const scores = row.slice(itemStart, itemEnd);
   const scored  = scores.filter(s=>s&&s.trim()!=='').length;
   const avg     = row[itemEnd] || '';
@@ -3845,10 +3867,11 @@ function loadStudentRow(row, tabName){
   }
 
   // Restore custom field values — must render the bar first so the inputs exist in DOM
+  // Use the recalculated customCount (after any template switch) for correct column offset
   renderCustomFieldsBar();
   (config.customFields||[]).forEach((f, i)=>{
     const el = document.getElementById('cf_'+f.id);
-    if(el) el.value = row[6+i] || '';
+    if(el) el.value = row[6+i] || '';  // custom fields start at col 6
   });
 
   // Comments are the last column; Avg Score is second-to-last — skip it
