@@ -657,6 +657,18 @@ body{background:var(--light);font-family:'Lato',sans-serif;margin:0;padding:0;}
     <div style="margin-top:14px;">
       <button class="btn btn-primary" onclick="saveDriveSettings()"><i class="fas fa-check"></i> Save Settings</button>
     </div>
+
+    <hr style="margin:20px 0;"/>
+    <div style="font-size:14px;font-weight:700;color:var(--dk);margin-bottom:4px;"><i class="fas fa-code-branch" style="color:#7b1fa2;margin-right:6px;"></i>Migrate Old Assessment Tabs</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px;">
+      Reads existing assessment tabs and splits rows by Teacher column into new per-teacher tabs
+      (e.g. <code>Final Assessment - Harden</code>, <code>Final Assessment - Wade</code>).
+      Original tabs are left intact as backup.
+    </div>
+    <div id="migrateStatus" style="font-size:12px;color:#666;margin-bottom:10px;display:none;background:#f8f9fa;border-radius:6px;padding:8px 12px;"></div>
+    <button class="btn btn-sm" style="background:#7b1fa2;color:white;" onclick="migrateOldTabs()">
+      <i class="fas fa-code-branch"></i> Migrate Old Tabs
+    </button>
   </div>
 
   <!-- TAB: SCALES -->
@@ -2948,6 +2960,159 @@ function populateDriveSettings(){
   const sel=document.getElementById('adminSyncInterval');
   if(sel) sel.value=String(config.driveSettings.syncInterval||60);
 }
+async function migrateOldTabs(){
+  const sharedId = getSharedSheetId();
+  if(!sharedId || !accessToken){
+    toast('Not signed in or no tracking sheet configured','fas fa-triangle-exclamation','#e74c3c');
+    return;
+  }
+
+  const statusEl = document.getElementById('migrateStatus');
+  const log = msg => {
+    if(statusEl){
+      statusEl.style.display='block';
+      statusEl.innerHTML += msg + '<br/>';
+    }
+    console.log('[migrate]', msg);
+  };
+
+  if(statusEl) statusEl.innerHTML = '';
+  log('<i class="fas fa-rotate fa-spin"></i> Fetching sheet tabs…');
+
+  try{
+    // 1. Get all tabs
+    const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sharedId}?fields=sheets.properties.title`,{
+      headers:{Authorization:'Bearer '+accessToken}
+    });
+    const meta = await r.json();
+    if(meta.error) throw new Error(meta.error.message);
+
+    const SYSTEM_TABS = new Set(['USERS','Config','CONFIG','_TEMPLATES','Sheet1','Sheet2','Sheet3']);
+    const teachers = (config.teachers||[]);
+
+    // Find tabs that look like old-format (no " - Teacher" suffix)
+    const allTabs = (meta.sheets||[]).map(s=>s.properties.title);
+    const oldTabs = allTabs.filter(t => {
+      if(SYSTEM_TABS.has(t) || t.startsWith('_')) return false;
+      // If it already ends with a known teacher suffix, skip it
+      return !teachers.some(tc => t.endsWith(' - '+tc));
+    });
+
+    if(!oldTabs.length){
+      log('✓ No old-format tabs found — all tabs already use per-teacher format.');
+      return;
+    }
+
+    log(`Found ${oldTabs.length} tab(s) to migrate: ${oldTabs.map(t=>`"${t}"`).join(', ')}`);
+
+    let totalMoved = 0;
+
+    for(const tabName of oldTabs){
+      log(`<br/>Processing tab: <strong>${tabName}</strong>`);
+
+      // 2. Fetch all rows from this tab
+      const tr = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sharedId}/values/${encodeURIComponent(tabName)}`,
+        {headers:{Authorization:'Bearer '+accessToken}}
+      );
+      const td = await tr.json();
+      const allRows = td.values || [];
+      if(allRows.length < 2){ log('&nbsp;&nbsp;→ Empty or header-only, skipping.'); continue; }
+
+      const hdr = allRows[0];
+      const dataRows = allRows.slice(1).filter(r => r.some(c=>c));
+      const teacherColIdx = hdr.findIndex(h=>(h||'').toLowerCase()==='teacher');
+
+      if(teacherColIdx < 0){
+        log('&nbsp;&nbsp;→ No Teacher column found, skipping.');
+        continue;
+      }
+
+      // 3. Group rows by teacher
+      const byTeacher = {};
+      dataRows.forEach(row => {
+        const teacher = (row[teacherColIdx]||'').trim() || 'Unknown';
+        if(!byTeacher[teacher]) byTeacher[teacher] = [];
+        byTeacher[teacher].push(row);
+      });
+
+      log(`&nbsp;&nbsp;→ ${dataRows.length} rows across ${Object.keys(byTeacher).length} teacher(s): ${Object.keys(byTeacher).join(', ')}`);
+
+      // 4. Write each teacher's rows to their own tab
+      for(const [teacher, rows] of Object.entries(byTeacher)){
+        const newTabName = `${tabName} - ${teacher}`;
+
+        // Ensure the new tab exists
+        await ensureTab(sharedId, newTabName);
+
+        // Fetch existing header of new tab (may already have rows from previous saves)
+        const existingHr = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${sharedId}/values/${encodeURIComponent(newTabName+'!1:1')}`,
+          {headers:{Authorization:'Bearer '+accessToken}}
+        );
+        const existingHd = await existingHr.json();
+        const existingHdr = (existingHd.values && existingHd.values[0]) || [];
+
+        // Write header if tab is empty, otherwise use existing header
+        const targetHdr = existingHdr.length ? existingHdr : hdr;
+        if(!existingHdr.length){
+          await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sharedId}/values/${encodeURIComponent(newTabName+'!A1')}?valueInputOption=USER_ENTERED`,{
+            method:'PUT',
+            headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+            body: JSON.stringify({range:`${newTabName}!A1`,majorDimension:'ROWS',values:[hdr]})
+          });
+        }
+
+        // Map each row to target header columns by name
+        const mappedRows = rows.map(row => {
+          const mapped = new Array(targetHdr.length).fill('');
+          hdr.forEach((col, i) => {
+            const targetIdx = targetHdr.findIndex(h=>(h||'').toLowerCase()===(col||'').toLowerCase());
+            if(targetIdx >= 0) mapped[targetIdx] = row[i] || '';
+          });
+          return mapped;
+        });
+
+        // Check for existing rows (by email) to avoid duplicates
+        const emailColIdx = targetHdr.findIndex(h=>(h||'').toLowerCase()==='email');
+        const existingDataR = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${sharedId}/values/${encodeURIComponent(newTabName)}`,
+          {headers:{Authorization:'Bearer '+accessToken}}
+        );
+        const existingData = await existingDataR.json();
+        const existingRows = (existingData.values||[]).slice(1);
+        const existingEmails = new Set(existingRows.map(r=>(r[emailColIdx]||'').toLowerCase()));
+
+        const newRows = mappedRows.filter(r => {
+          const email = (r[emailColIdx]||'').toLowerCase();
+          return !email || !existingEmails.has(email);
+        });
+        const skipped = mappedRows.length - newRows.length;
+
+        if(newRows.length){
+          await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sharedId}/values/${encodeURIComponent(newTabName+'!A1')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{
+            method:'POST',
+            headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+            body: JSON.stringify({majorDimension:'ROWS',values:newRows})
+          });
+        }
+
+        log(`&nbsp;&nbsp;→ "${newTabName}": ${newRows.length} row(s) migrated${skipped?' ('+skipped+' already existed, skipped)':''}.`);
+        totalMoved += newRows.length;
+      }
+    }
+
+    log(`<br/><strong style="color:#27ae60;">✓ Migration complete — ${totalMoved} total row(s) moved.</strong>`);
+    log(`Original tabs left intact as backup. You can delete them manually in Google Sheets once verified.`);
+    toast('Migration complete','fas fa-code-branch','#27ae60');
+    fetchAssessmentNames();
+
+  }catch(e){
+    log(`<span style="color:#e74c3c;">✗ Error: ${esc(e.message||String(e))}</span>`);
+    toast('Migration failed: '+(e.message||e),'fas fa-triangle-exclamation','#e74c3c');
+  }
+}
+
 function saveDriveSettings(){
   config.driveSettings.trackingSheetId=document.getElementById('adminTrackId').value.trim();
   config.driveSettings.defaultFolderId=document.getElementById('adminFolderId').value.trim();
