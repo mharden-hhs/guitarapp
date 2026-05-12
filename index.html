@@ -2104,21 +2104,13 @@ function populateRosterSelectors(){
     return n.includes(' - ' + currentTeacher) || !n.includes(' - ');
   });
 
-  // Build display labels by stripping teacher+template suffixes
-  const tpls = getTemplates();
+  // Build display labels by stripping all suffixes, showing template if present
   const tabLabel = (tabName) => {
-    let name = tabName;
-    for(const tpl of tpls){
-      const s = ' - ' + tpl.name;
-      if(name.endsWith(s)){ name = name.slice(0,-s.length); break; }
-    }
-    for(const t of (config.teachers||[])){
-      const s = ' - ' + t;
-      if(name.endsWith(s)){ name = name.slice(0,-s.length); break; }
-    }
-    // If name still differs from tabName, show template info
-    const suffix = tabName.slice(name.length);
-    return suffix.includes(' - ') ? `${name}${suffix.replace(' - '+currentTeacher,'').replace(' - ',' — ')}` : name;
+    const base = stripTabSuffixes(tabName);
+    const suffix = tabName.slice(base.length); // e.g. " - Harden - Guitar Final Assessment"
+    // Show template portion if it differs from base
+    const tplPart = suffix.replace(currentTeacher ? ` - ${currentTeacher}` : '', '').replace(/^ - /, '');
+    return tplPart ? `${base} — ${tplPart}` : base;
   };
 
   assSel.innerHTML = '<option value="">Select assessment…</option>' +
@@ -3496,23 +3488,38 @@ function getAssessmentName(){
 // Tab name used in the sheet — appends teacher name so each teacher gets their own tab
 // e.g. "Final Assessment 2026 - Harden"
 // This keeps different teachers' templates from colliding in the same tab
+// Strip all known teacher and template suffixes from a tab name to get the base assessment name
+// Handles any combination of "- Teacher", "- Template", "- Teacher - Template" suffixes
+function stripTabSuffixes(name){
+  if(!name) return '';
+  let prev = '';
+  // Keep stripping until nothing changes (handles compound suffixes)
+  while(prev !== name){
+    prev = name;
+    // Strip known template names
+    for(const tpl of getTemplates()){
+      const s = ' - ' + tpl.name;
+      if(name.endsWith(s)){ name = name.slice(0, -s.length); break; }
+    }
+    // Strip known teacher names
+    for(const t of (config.teachers||[])){
+      const s = ' - ' + t;
+      if(name.endsWith(s)){ name = name.slice(0, -s.length); break; }
+    }
+  }
+  return name;
+}
+
 function getSheetTabName(){
   const assessment = getAssessmentName();
   if(!assessment) return '';
-  const teacher    = getFormMeta().teacherName || '';
-  const tplName    = getCurrentTemplateName() || '';
+  const teacher  = getFormMeta().teacherName || '';
+  const tplName  = getCurrentTemplateName() || '';
 
-  // Strip any existing teacher suffix from the assessment name
-  let base = assessment;
-  const teachers = config.teachers || [];
-  for(const t of teachers){
-    const suffix = ' - ' + t;
-    if(base.endsWith(suffix)){ base = base.slice(0, -suffix.length); break; }
-  }
+  // Strip any existing suffixes to get clean base name
+  const base = stripTabSuffixes(assessment);
 
-  // Tab name: "{Assessment} - {Teacher} - {Template}"
-  // Each unique assessment+teacher+template combination gets its own tab
-  // with a fixed, immutable header matching exactly that template's columns
+  // Build: "{Assessment} - {Teacher} - {Template}"
   const parts = [base];
   if(teacher)  parts.push(teacher);
   if(tplName && tplName !== base) parts.push(tplName);
@@ -3958,24 +3965,8 @@ async function fetchAssessmentNames(){
     // Store full tab names for roster (teacher-suffixed)
     knownAssessmentNames = allTabs;
 
-    // For the assessment name input dropdown, strip teacher and template suffixes
-    // so teachers type "Final Assessment 2026" not "Final Assessment 2026 - Harden - Guitar Final"
-    knownAssessmentNamesDisplay = [...new Set(allTabs.map(t => {
-      let name = t;
-      // Strip known template names first (innermost suffix)
-      const tpls = getTemplates();
-      for(const tpl of tpls){
-        const suffix = ' - ' + tpl.name;
-        if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
-      }
-      // Then strip known teacher names
-      const teacherNames = (config.teachers||[]);
-      for(const teacher of teacherNames){
-        const suffix = ' - ' + teacher;
-        if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
-      }
-      return name;
-    }))].filter(Boolean);
+    // For the assessment name input dropdown, strip all suffixes
+    knownAssessmentNamesDisplay = [...new Set(allTabs.map(t => stripTabSuffixes(t)))].filter(Boolean);
 
     if(rosterOpen) populateRosterSelectors();
   }catch(e){}
@@ -4210,25 +4201,9 @@ function loadStudentRow(row, tabName){
   const taEl = document.getElementById('overallComments');
   if(taEl) taEl.value = (commentsColIdx >= 0 ? row[commentsColIdx] : '') || '';
 
-  // Set assessment name — strip teacher and template suffixes so field shows base name only
-  // getSheetTabName() re-adds them on save
-  const baseTabName = (()=>{
-    let name = tabName;
-    // Strip known teacher names
-    const teachers = config.teachers || [];
-    for(const t of teachers){
-      const suffix = ' - ' + t;
-      if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
-    }
-    // Strip known template names
-    const tpls = getTemplates();
-    for(const tpl of tpls){
-      const suffix = ' - ' + tpl.name;
-      if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
-    }
-    return name;
-  })();
-  const anEl=document.getElementById('assessmentName'); if(anEl) anEl.value=baseTabName;
+  // Set assessment name — strip all suffixes so field shows base name only
+  const anEl=document.getElementById('assessmentName');
+  if(anEl) anEl.value = stripTabSuffixes(tabName);
   renderAssessment(); updateSummary(); autoSave();
   resetAutoComplete();
   toast(`Loaded: ${row[0]||'student'} from "${tabName}"`,'fas fa-folder-open');
