@@ -2094,18 +2094,35 @@ function populateRosterSelectors(){
   clsSel.innerHTML = '<option value="">Select class…</option>' +
     classes.map(c=>`<option value="${esc(c)}" ${c===prevCls?'selected':''}>${esc(c)}</option>`).join('');
 
-  // Assessment dropdown — filter to current teacher's tabs
-  // Tab names are "Assessment Name - TeacherName"; show all if no teacher selected
+  // Assessment dropdown — filter to current teacher's tabs, show clean labels
   const assSel = document.getElementById('rosterAssessSelect');
   const prevAss = assSel.value;
   const currentTeacher = getFormMeta().teacherName || '';
   const visibleTabs = knownAssessmentNames.filter(n => {
-    if(!currentTeacher) return true; // no teacher selected — show all
-    const suffix = ' - ' + currentTeacher;
-    return n.endsWith(suffix) || !n.includes(' - '); // teacher's tabs + legacy unsuffixed tabs
+    if(!currentTeacher) return true;
+    // Show tabs that contain this teacher's name as a segment
+    return n.includes(' - ' + currentTeacher) || !n.includes(' - ');
   });
+
+  // Build display labels by stripping teacher+template suffixes
+  const tpls = getTemplates();
+  const tabLabel = (tabName) => {
+    let name = tabName;
+    for(const tpl of tpls){
+      const s = ' - ' + tpl.name;
+      if(name.endsWith(s)){ name = name.slice(0,-s.length); break; }
+    }
+    for(const t of (config.teachers||[])){
+      const s = ' - ' + t;
+      if(name.endsWith(s)){ name = name.slice(0,-s.length); break; }
+    }
+    // If name still differs from tabName, show template info
+    const suffix = tabName.slice(name.length);
+    return suffix.includes(' - ') ? `${name}${suffix.replace(' - '+currentTeacher,'').replace(' - ',' — ')}` : name;
+  };
+
   assSel.innerHTML = '<option value="">Select assessment…</option>' +
-    visibleTabs.map(n=>`<option value="${esc(n)}" ${n===prevAss?'selected':''}>${esc(n)}</option>`).join('');
+    visibleTabs.map(n=>`<option value="${esc(n)}" ${n===prevAss?'selected':''}>${esc(tabLabel(n))}</option>`).join('');
 
   // Pre-select from current form if nothing already chosen
   if(!clsSel.value){
@@ -3390,7 +3407,7 @@ function updateSharedSheetBadge(){
       hint.innerHTML = `→ tab will be <strong>${esc(tabName)}</strong> — <span style="color:#e67e22;">select a teacher to namespace by teacher</span>`;
       hint.style.color = '#555';
     } else {
-      hint.textContent = 'Each unique name creates a separate tab in the shared sheet.';
+      hint.textContent = 'Each unique assessment+teacher+template combination gets its own tab.';
       hint.style.color = '#aaa';
     }
   }
@@ -3482,13 +3499,24 @@ function getAssessmentName(){
 function getSheetTabName(){
   const assessment = getAssessmentName();
   if(!assessment) return '';
-  const teacher = getFormMeta().teacherName || '';
-  if(!teacher) return assessment;
-  // Strip any existing teacher suffix to avoid double-appending
-  // e.g. if assessment is already "Final Assessment - Harden", don't add "- Harden" again
-  const suffix = ' - ' + teacher;
-  const base = assessment.endsWith(suffix) ? assessment.slice(0, -suffix.length) : assessment;
-  return `${base} - ${teacher}`;
+  const teacher    = getFormMeta().teacherName || '';
+  const tplName    = getCurrentTemplateName() || '';
+
+  // Strip any existing teacher suffix from the assessment name
+  let base = assessment;
+  const teachers = config.teachers || [];
+  for(const t of teachers){
+    const suffix = ' - ' + t;
+    if(base.endsWith(suffix)){ base = base.slice(0, -suffix.length); break; }
+  }
+
+  // Tab name: "{Assessment} - {Teacher} - {Template}"
+  // Each unique assessment+teacher+template combination gets its own tab
+  // with a fixed, immutable header matching exactly that template's columns
+  const parts = [base];
+  if(teacher)  parts.push(teacher);
+  if(tplName && tplName !== base) parts.push(tplName);
+  return parts.join(' - ');
 }
 
 function getSharedSheetId(){
@@ -3620,13 +3648,10 @@ async function ensureTab(spreadsheetId, tabName){
 
 /* ── Repair header of an existing tab (fixes tabs created with wrong template) */
 async function repairTabHeader(spreadsheetId, tabName){
-  if(!accessToken || !spreadsheetId || !tabName) return;
-  const header = buildSharedHeader();
-  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabName+'!A1')}?valueInputOption=USER_ENTERED`,{
-    method:'PUT',
-    headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-    body: JSON.stringify({range:`${tabName}!A1`,majorDimension:'ROWS',values:[header]})
-  });
+  // No-op: headers are now immutable after first write.
+  // The header is only written once by upsertStudentRow when the tab is brand new.
+  // Calling this no longer overwrites existing headers.
+  console.log('[repairTabHeader] skipped — headers are immutable after first write');
 }
 
 /* ── Find existing student row in tab (match on email + class) ── */
@@ -3655,7 +3680,7 @@ async function upsertStudentRow(spreadsheetId, tabName){
   const email     = newRow[1];
   const cls       = newRow[2];
 
-  // Fetch existing header
+  // ── Step 1: fetch the existing header (if any) ──────────────────────────
   let existingHeader = [];
   try{
     const hr = await fetch(
@@ -3666,74 +3691,55 @@ async function upsertStudentRow(spreadsheetId, tabName){
     existingHeader = (hd.values && hd.values[0]) || [];
   }catch(e){}
 
-  // If no existing header, write fresh and append
+  // ── Step 2: decide which header to use ──────────────────────────────────
+  // If the tab is brand new (no header), write the current header and use it.
+  // If the tab already has a header, USE THAT — never overwrite it.
+  // This makes each tab's column layout immutable after first write.
+  let activeHeader;
   if(!existingHeader.length){
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabName+'!A1')}?valueInputOption=USER_ENTERED`,{
-      method:'PUT', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-      body: JSON.stringify({range:`${tabName}!A1`,majorDimension:'ROWS',values:[newHeader]})
-    });
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabName+'!A1')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{
-      method:'POST', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-      body: JSON.stringify({majorDimension:'ROWS',values:[newRow]})
-    });
-    return 'appended';
+    // New tab — write header first
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabName+'!A1')}?valueInputOption=USER_ENTERED`,
+      { method:'PUT',
+        headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+        body: JSON.stringify({range:`${tabName}!A1`, majorDimension:'ROWS', values:[newHeader]})
+      }
+    );
+    activeHeader = newHeader;
+  } else {
+    activeHeader = existingHeader;
   }
 
-  // Terminal columns that must always be last and never duplicated
-  const TERMINAL = ['avg score','overall comments'];
-
-  // Build merged header:
-  // 1. Strip terminals from existing, deduplicate
-  const seenCols = new Set();
-  const dedupedCore = existingHeader
-    .filter(h => !TERMINAL.includes((h||'').toLowerCase().trim()))
-    .filter(h => {
-      const k = (h||'').toLowerCase().trim();
-      if(!k || seenCols.has(k)) return false;
-      seenCols.add(k); return true;
-    });
-
-  // 2. Add any new columns from newHeader (excluding terminals)
-  newHeader
-    .filter(h => !TERMINAL.includes((h||'').toLowerCase().trim()))
-    .forEach(col => {
-      const k = (col||'').toLowerCase().trim();
-      if(k && !seenCols.has(k)){ seenCols.add(k); dedupedCore.push(col); }
-    });
-
-  // 3. Terminals always last, exactly once
-  const mergedHeader = [...dedupedCore, 'Avg Score', 'Overall Comments'];
-
-  // Map new row values into merged header by column name
-  const mergedRow = new Array(mergedHeader.length).fill('');
-  newHeader.forEach((col, newIdx) => {
-    const k = (col||'').toLowerCase().trim();
-    const mergedIdx = TERMINAL.includes(k)
-      ? mergedHeader.map(h=>(h||'').toLowerCase().trim()).lastIndexOf(k)
-      : mergedHeader.findIndex(h => (h||'').toLowerCase().trim() === k);
-    if(mergedIdx >= 0) mergedRow[mergedIdx] = newRow[newIdx] || '';
+  // ── Step 3: map current values into the active header by column name ─────
+  // Columns present in activeHeader but not in newHeader get empty string.
+  // Columns in newHeader but not in activeHeader are silently dropped
+  // (they belong to a different template / different tab).
+  const activeRow = new Array(activeHeader.length).fill('');
+  newHeader.forEach((col, ni) => {
+    const ai = activeHeader.findIndex(h => (h||'').toLowerCase().trim() === (col||'').toLowerCase().trim());
+    if(ai >= 0) activeRow[ai] = newRow[ni] ?? '';
   });
 
-  // Write corrected header (also fixes duplicates already in sheet)
-  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabName+'!A1')}?valueInputOption=USER_ENTERED`,{
-    method:'PUT', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-    body: JSON.stringify({range:`${tabName}!A1`,majorDimension:'ROWS',values:[mergedHeader]})
-  });
-
-  // Update or append student row
+  // ── Step 4: find existing student row and update, or append ─────────────
   const existingRowIdx = await findStudentRow(spreadsheetId, tabName, email, cls);
   if(existingRowIdx > 0){
     const range = `${tabName}!A${existingRowIdx}`;
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,{
-      method:'PUT', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-      body: JSON.stringify({range,majorDimension:'ROWS',values:[mergedRow]})
-    });
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+      { method:'PUT',
+        headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+        body: JSON.stringify({range, majorDimension:'ROWS', values:[activeRow]})
+      }
+    );
     return 'updated';
   } else {
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabName+'!A1')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{
-      method:'POST', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-      body: JSON.stringify({majorDimension:'ROWS',values:[mergedRow]})
-    });
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(tabName+'!A1')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+      { method:'POST',
+        headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+        body: JSON.stringify({majorDimension:'ROWS', values:[activeRow]})
+      }
+    );
     return 'appended';
   }
 }
@@ -3952,18 +3958,24 @@ async function fetchAssessmentNames(){
     // Store full tab names for roster (teacher-suffixed)
     knownAssessmentNames = allTabs;
 
-    // For the assessment name input dropdown, strip teacher suffix so teachers
-    // type "Final Assessment 2026" not "Final Assessment 2026 - Harden"
-    // Tab format: "Assessment Name - TeacherName"
+    // For the assessment name input dropdown, strip teacher and template suffixes
+    // so teachers type "Final Assessment 2026" not "Final Assessment 2026 - Harden - Guitar Final"
     knownAssessmentNamesDisplay = [...new Set(allTabs.map(t => {
-      // Strip known teacher names from the end
+      let name = t;
+      // Strip known template names first (innermost suffix)
+      const tpls = getTemplates();
+      for(const tpl of tpls){
+        const suffix = ' - ' + tpl.name;
+        if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
+      }
+      // Then strip known teacher names
       const teacherNames = (config.teachers||[]);
       for(const teacher of teacherNames){
         const suffix = ' - ' + teacher;
-        if(t.endsWith(suffix)) return t.slice(0, -suffix.length);
+        if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
       }
-      return t; // no suffix found, return as-is (legacy tab or no teacher set)
-    }))];
+      return name;
+    }))].filter(Boolean);
 
     if(rosterOpen) populateRosterSelectors();
   }catch(e){}
@@ -4198,15 +4210,23 @@ function loadStudentRow(row, tabName){
   const taEl = document.getElementById('overallComments');
   if(taEl) taEl.value = (commentsColIdx >= 0 ? row[commentsColIdx] : '') || '';
 
-  // Set assessment name — strip teacher suffix so field shows base name only
-  // (getSheetTabName() re-adds the suffix on save)
+  // Set assessment name — strip teacher and template suffixes so field shows base name only
+  // getSheetTabName() re-adds them on save
   const baseTabName = (()=>{
+    let name = tabName;
+    // Strip known teacher names
     const teachers = config.teachers || [];
     for(const t of teachers){
       const suffix = ' - ' + t;
-      if(tabName.endsWith(suffix)) return tabName.slice(0, -suffix.length);
+      if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
     }
-    return tabName;
+    // Strip known template names
+    const tpls = getTemplates();
+    for(const tpl of tpls){
+      const suffix = ' - ' + tpl.name;
+      if(name.endsWith(suffix)){ name = name.slice(0, -suffix.length); break; }
+    }
+    return name;
   })();
   const anEl=document.getElementById('assessmentName'); if(anEl) anEl.value=baseTabName;
   renderAssessment(); updateSummary(); autoSave();
