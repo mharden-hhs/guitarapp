@@ -3483,7 +3483,12 @@ function getSheetTabName(){
   const assessment = getAssessmentName();
   if(!assessment) return '';
   const teacher = getFormMeta().teacherName || '';
-  return teacher ? `${assessment} - ${teacher}` : assessment;
+  if(!teacher) return assessment;
+  // Strip any existing teacher suffix to avoid double-appending
+  // e.g. if assessment is already "Final Assessment - Harden", don't add "- Harden" again
+  const suffix = ' - ' + teacher;
+  const base = assessment.endsWith(suffix) ? assessment.slice(0, -suffix.length) : assessment;
+  return `${base} - ${teacher}`;
 }
 
 function getSharedSheetId(){
@@ -4193,8 +4198,17 @@ function loadStudentRow(row, tabName){
   const taEl = document.getElementById('overallComments');
   if(taEl) taEl.value = (commentsColIdx >= 0 ? row[commentsColIdx] : '') || '';
 
-  // Set assessment name
-  const anEl=document.getElementById('assessmentName'); if(anEl) anEl.value=tabName;
+  // Set assessment name — strip teacher suffix so field shows base name only
+  // (getSheetTabName() re-adds the suffix on save)
+  const baseTabName = (()=>{
+    const teachers = config.teachers || [];
+    for(const t of teachers){
+      const suffix = ' - ' + t;
+      if(tabName.endsWith(suffix)) return tabName.slice(0, -suffix.length);
+    }
+    return tabName;
+  })();
+  const anEl=document.getElementById('assessmentName'); if(anEl) anEl.value=baseTabName;
   renderAssessment(); updateSummary(); autoSave();
   resetAutoComplete();
   toast(`Loaded: ${row[0]||'student'} from "${tabName}"`,'fas fa-folder-open');
